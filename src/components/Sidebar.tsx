@@ -14,14 +14,27 @@ export const Sidebar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const menuItems = [
+  // Get user from localStorage to check roles
+  const userJson = localStorage.getItem('adminUser');
+  const user = userJson ? JSON.parse(userJson) : null;
+  const userRoles = user?.roles || [];
+  
+  const hasRole = (requiredRoles?: string[]) => {
+      if (!requiredRoles) return true;
+      if (userRoles.includes('admin')) return true; // Super admin accesses everything
+      return requiredRoles.some(role => userRoles.includes(role));
+  };
+
+  const allMenuItems = [
     { title: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-    { title: 'Users', icon: <Users size={20} />, path: '/users' },
-    { title: 'Protocols', icon: <Activity size={20} />, path: '/protocols' },
-    { title: 'Retreats', icon: <Calendar size={20} />, path: '/retreats' },
-    { title: 'Shop', icon: <ShoppingBag size={20} />, path: '/shop' },
-    { title: 'Settings', icon: <Settings size={20} />, path: '/settings' },
+    { title: 'Users', icon: <Users size={20} />, path: '/users', requiredRoles: ['admin', 'manager', 'coach'] },
+    { title: 'Protocols', icon: <Activity size={20} />, path: '/protocols', requiredRoles: ['admin', 'protocol_manager'] },
+    { title: 'Retreats', icon: <Calendar size={20} />, path: '/retreats', requiredRoles: ['admin', 'retreat_manager'] },
+    { title: 'Shop', icon: <ShoppingBag size={20} />, path: '/shop', requiredRoles: ['admin', 'shop_manager'] },
+    { title: 'Settings', icon: <Settings size={20} />, path: '/settings', requiredRoles: ['admin'] },
   ];
+
+  const menuItems = allMenuItems.filter(item => hasRole(item.requiredRoles));
 
   return (
     <div className="sidebar" style={{
