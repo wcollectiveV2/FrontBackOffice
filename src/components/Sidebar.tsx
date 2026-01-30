@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -11,6 +11,13 @@ import {
 
 export const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/login');
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -81,7 +88,9 @@ export const Sidebar = () => {
       </nav>
 
       <div style={{ padding: '24px', borderTop: '1px solid #334155' }}>
-        <button style={{
+        <button 
+          onClick={handleLogout}
+          style={{
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
