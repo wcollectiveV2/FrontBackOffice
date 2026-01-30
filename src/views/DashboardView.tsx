@@ -14,7 +14,7 @@ export const DashboardView = () => {
 
   const services = [
     { name: 'User Service', status: healthStatus.includes('User Service OK') ? 'healthy' : 'error' },
-    { name: 'Coaching Service', status: 'healthy' }, // Mock status for now, could fetch real
+    // { name: 'Coaching Service', status: 'healthy' }, // AI Service disabled
     { name: 'Habit Service', status: 'healthy' },
     { name: 'Retail Service', status: 'healthy' },
   ];
