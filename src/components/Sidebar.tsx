@@ -24,9 +24,12 @@ export const Sidebar = () => {
   // Get user from localStorage to check roles
   const userJson = localStorage.getItem('adminUser');
   const user = userJson ? JSON.parse(userJson) : null;
-  const userRoles = user?.roles || [];
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   
   const hasRole = (requiredRoles?: string[]) => {
+      // Fallback: Always allow admin users by email
+      if (user?.email === 'admin@chrislo.com' || user?.email === 'team@habitpulse.com') return true;
+
       if (!requiredRoles) return true;
       if (userRoles.includes('admin')) return true; // Super admin accesses everything
       return requiredRoles.some(role => userRoles.includes(role));
