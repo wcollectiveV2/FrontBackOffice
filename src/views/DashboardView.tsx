@@ -3,26 +3,39 @@ import { Users, Activity, ShoppingBag, CheckCircle, AlertTriangle } from 'lucide
 
 export const DashboardView = () => {
   const [healthStatus, setHealthStatus] = useState<string>('Checking backend...')
+  const [statsData, setStatsData] = useState({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
   
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    
+    // Health Check
     fetch(`${API_URL}/health`)
       .then(res => res.json())
       .then(data => setHealthStatus(data.status === 'healthy' ? 'User Service OK' : 'Issues Detected'))
-      .catch(() => setHealthStatus('Not Connected'))
+      .catch(() => setHealthStatus('Not Connected'));
+
+    // Stats Check
+    fetch(`${API_URL}/api/admin/stats`)
+        .then(res => res.json())
+        .then(setStatsData)
+        .catch(err => {
+            console.error('Failed to fetch stats', err);
+            // Default blank data
+            setStatsData({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
+        });
   }, [])
 
   const services = [
     { name: 'User Service', status: healthStatus.includes('User Service OK') ? 'healthy' : 'error' },
-    // { name: 'Coaching Service', status: 'healthy' }, // AI Service disabled
     { name: 'Habit Service', status: 'healthy' },
-    { name: 'Retail Service', status: 'healthy' },
+    { name: 'Coaching Service', status: 'warning' }, 
+    { name: 'Retail Service', status: 'warning' },
   ];
 
   const stats = [
-    { title: 'Total Users', value: '128', icon: <Users size={24} color="#3B82F6"/>, trend: '+12%' },
-    { title: 'Active Protocols', value: '42', icon: <Activity size={24} color="#10B981"/>, trend: '+5%' },
-    { title: 'Orders Today', value: '18', icon: <ShoppingBag size={24} color="#F59E0B"/>, trend: '-2%' },
+    { title: 'Total Users', value: statsData.totalUsers.toString(), icon: <Users size={24} color="#3B82F6"/>, trend: 'Live' },
+    { title: 'Active Protocols', value: statsData.activeProtocols.toString(), icon: <Activity size={24} color="#10B981"/>, trend: 'Active' },
+    { title: 'Orders Today', value: 'Coming Soon', icon: <ShoppingBag size={24} color="#F59E0B"/>, trend: '-' },
   ];
 
   return (
@@ -52,8 +65,8 @@ export const DashboardView = () => {
             {services.map((s, i) => (
               <div key={i} style={{ 
                 border: '1px solid',
-                borderColor: s.status === 'healthy' ? '#DCFCE7' : '#FEE2E2',
-                background: s.status === 'healthy' ? '#F0FDF4' : '#FEF2F2',
+                borderColor: s.status === 'healthy' ? '#DCFCE7' : s.status === 'warning' ? '#FEF3C7' : '#FEE2E2',
+                background: s.status === 'healthy' ? '#F0FDF4' : s.status === 'warning' ? '#FFFBEB' : '#FEF2F2',
                 padding: '16px',
                 borderRadius: '8px',
                 display: 'flex',
@@ -62,12 +75,17 @@ export const DashboardView = () => {
               }}>
                 {s.status === 'healthy' 
                   ? <CheckCircle size={20} color="#15803D" /> 
-                  : <AlertTriangle size={20} color="#B91C1C" />
+                  : s.status === 'warning'
+                    ? <Activity size={20} color="#D97706" />
+                    : <AlertTriangle size={20} color="#B91C1C" />
                 }
-                <span style={{ 
-                  fontWeight: '600',
-                  color: s.status === 'healthy' ? '#166534' : '#991B1B' 
-                }}>{s.name}</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ 
+                    fontWeight: '600',
+                    color: s.status === 'healthy' ? '#166534' : s.status === 'warning' ? '#B45309' : '#991B1B' 
+                    }}>{s.name}</span>
+                    {s.status === 'warning' && <span style={{ fontSize: '10px', color: '#B45309' }}>PRO (Coming Soon)</span>}
+                </div>
               </div>
             ))}
           </div>
