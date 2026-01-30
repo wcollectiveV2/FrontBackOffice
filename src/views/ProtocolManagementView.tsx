@@ -31,8 +31,9 @@ interface LeaderboardEntry {
     completionCount: number;
 }
 
-const HABIT_SERVICE_URL = 'http://localhost:3002';
-const USER_SERVICE_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const HABIT_SERVICE_URL = `${API_URL}/api`;
+const USER_SERVICE_URL = `${API_URL}/api`;
 
 export const ProtocolManagementView = () => {
     // State

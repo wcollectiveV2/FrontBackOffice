@@ -5,9 +5,10 @@ export const DashboardView = () => {
   const [healthStatus, setHealthStatus] = useState<string>('Checking backend...')
   
   useEffect(() => {
-    fetch('http://localhost:3001/health')
-      .then(res => res.text())
-      .then(data => setHealthStatus(data))
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    fetch(`${API_URL}/health`)
+      .then(res => res.json())
+      .then(data => setHealthStatus(data.status === 'healthy' ? 'User Service OK' : 'Issues Detected'))
       .catch(() => setHealthStatus('Not Connected'))
   }, [])
 

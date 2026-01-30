@@ -25,9 +25,11 @@ export const UserManagementView = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   const fetchUsers = () => {
     setLoading(true);
-    fetch('http://localhost:3001/users')
+    fetch(`${API_URL}/api/users`)
       .then(res => res.json())
       .then(data => {
         setUsers(data); 
@@ -40,7 +42,7 @@ export const UserManagementView = () => {
   };
   
   const fetchGroups = () => {
-      fetch('http://localhost:3001/groups')
+      fetch(`${API_URL}/api/groups`)
         .then(res => res.json())
         .then(setAvailableGroups)
         .catch(console.error);
@@ -60,14 +62,14 @@ export const UserManagementView = () => {
   const saveChanges = async (userId: number) => {
     try {
         // Save Roles
-        await fetch(`http://localhost:3001/users/${userId}/roles`, {
+        await fetch(`${API_URL}/api/users/${userId}/roles`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ roles: selectedRoles })
         });
         
         // Save Groups
-        const res = await fetch(`http://localhost:3001/users/${userId}/groups`, {
+        const res = await fetch(`${API_URL}/api/users/${userId}/groups`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ groupIds: selectedGroupIds })
