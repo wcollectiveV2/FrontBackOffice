@@ -5,7 +5,7 @@ interface Protocol {
   id: number;
   name: string;
   description: string;
-  creatorId: number;
+  creatorId: string;
   createdAt: string;
   elements?: ProtocolElement[];
 }
@@ -20,13 +20,13 @@ interface ProtocolElement {
 }
 
 interface User {
-   id: number;
+   id: string; // Changed from number to string (UUID)
    email: string;
    role: string;
 }
 
 interface LeaderboardEntry {
-    userId: number;
+    userId: string; // Changed from number to string
     score: number;
     completionCount: number;
 }

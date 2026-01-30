@@ -8,7 +8,7 @@ interface Group {
 }
 
 interface User {
-  id: number;
+  id: string; // Changed from number to string (UUID)
   email: string;
   roles: string[];
   groups: Group[];
@@ -19,7 +19,7 @@ export const UserManagementView = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Temporary state for editing
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -59,7 +59,7 @@ export const UserManagementView = () => {
       setSelectedGroupIds(user.groups ? user.groups.map(g => g.id) : []);
   }
 
-  const saveChanges = async (userId: number) => {
+  const saveChanges = async (userId: string) => {
     try {
         // Save Roles
         await fetch(`${API_URL}/api/users/${userId}/roles`, {
