@@ -27,6 +27,7 @@ export const Sidebar = () => {
 
   const allMenuItems = [
     { title: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
+    { title: 'Organizations', icon: <Users size={20} />, path: '/organizations', requiredRoles: ['admin', 'manager'] },
     { title: 'Users', icon: <Users size={20} />, path: '/users', requiredRoles: ['admin', 'manager', 'coach'] },
     { title: 'Protocols', icon: <Activity size={20} />, path: '/protocols', requiredRoles: ['admin', 'protocol_manager'] },
     { title: 'Retreats', icon: <Calendar size={20} />, path: '/retreats', requiredRoles: ['admin', 'retreat_manager'] },

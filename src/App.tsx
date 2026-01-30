@@ -3,6 +3,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { DashboardView } from './views/DashboardView';
 import { UserManagementView } from './views/UserManagementView';
 import { ProtocolManagementView } from './views/ProtocolManagementView';
+import { OrganizationManagementView } from './views/OrganizationManagementView';
 import { LoginView } from './views/LoginView';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/login" element={<LoginView />} />
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<DashboardView />} />
+          <Route path="organizations" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><OrganizationManagementView /></ProtectedRoute>} />
           <Route path="users" element={<ProtectedRoute allowedRoles={['manager', 'coach']}><UserManagementView /></ProtectedRoute>} />
           <Route path="protocols" element={<ProtectedRoute allowedRoles={['protocol_manager']}><ProtocolManagementView /></ProtectedRoute>} />
           <Route path="retreats" element={<ProtectedRoute allowedRoles={['retreat_manager']}><div style={{ padding: '20px' }}><h2>Retreats Management</h2><p>Coming Soon</p></div></ProtectedRoute>} />
