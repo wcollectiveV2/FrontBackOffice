@@ -19,18 +19,11 @@ export default defineConfig({
         short_name: 'Admin',
         description: 'White-Label Ecosystem Admin',
         theme_color: '#ffffff',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+        /* 
+           TODO: Generate regular PWA icons (pwa-192x192.png, pwa-512x512.png) 
+           and place them in the 'public' directory to enable PWA installation.
+        */
+        icons: []
       }
     })
   ],
