@@ -21,6 +21,7 @@ export const UserManagementView = () => {
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // State for Add Modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -31,6 +32,17 @@ export const UserManagementView = () => {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]); // Strings now
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  
+  // Filter users based on search query
+  const filteredUsers = users.filter(user => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      user.email.toLowerCase().includes(query) ||
+      (user.name?.toLowerCase().includes(query)) ||
+      user.roles.some(role => role.toLowerCase().includes(query))
+    );
+  });
 
   const fetchUsers = () => {
     setLoading(true);
@@ -139,6 +151,8 @@ export const UserManagementView = () => {
                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
                 <input 
                   placeholder="Search users..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ 
                     padding: '10px 10px 10px 40px', 
                     borderRadius: '8px', 
@@ -258,7 +272,11 @@ export const UserManagementView = () => {
           <tbody>
             {loading ? (
                <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center' }}>Loading users...</td></tr>
-            ) : users.map(user => (
+            ) : filteredUsers.length === 0 ? (
+               <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                 {searchQuery ? `No users found matching "${searchQuery}"` : 'No users found'}
+               </td></tr>
+            ) : filteredUsers.map(user => (
               <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                 <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
                   <div style={{ fontWeight: '500', color: '#1E293B' }}>{user.name || user.email}</div>
