@@ -60,12 +60,31 @@ export const DashboardView = () => {
   const [activityData, setActivityData] = useState<DailyActivity[]>([]);
   
   // Get admin user name
-  const userJson = localStorage.getItem('adminUser');
-  const user = userJson ? JSON.parse(userJson) : null;
+  let user = null;
+  try {
+    const userJson = localStorage.getItem('adminUser');
+    if (userJson && userJson !== 'undefined' && userJson !== 'null') {
+      user = JSON.parse(userJson);
+    }
+  } catch (e) {
+    console.error('Error parsing adminUser:', e);
+  }
   const adminName = user?.name?.split(' ')[0] || 'Admin';
 
   useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Default to port 3001 (Backend) not 3000 (Frontend)
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = baseUrl.replace(/\/api\/?$/, '');
+
+    const token = localStorage.getItem('adminToken');
+    
+    // Skip checking if no token (likely redirecting)
+    if (!token) return;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     
     // Health Check
     fetch(`${API_URL}/health`)
@@ -74,9 +93,20 @@ export const DashboardView = () => {
       .catch(() => setHealthStatus('Not Connected'));
 
     // Stats Check
-    fetch(`${API_URL}/api/admin/stats`)
-        .then(res => res.json())
+    fetch(`${API_URL}/api/admin/stats`, { headers })
+        .then(res => {
+          if (!res.ok) {
+            // Should probably check status before calling json()
+            if (res.status === 401) throw new Error('Unauthorized');
+            if (res.status === 404) throw new Error('Not Found');
+            if (res.status === 500) {
+              return res.text().then(text => { throw new Error('Server Error: ' + text) });
+            }
+          }
+          return res.json();
+        })
         .then(data => {
+
           setStatsData({
             ...data,
             activeChallenges: data.activeChallenges || 23,
@@ -124,7 +154,7 @@ export const DashboardView = () => {
   const stats = [
     { 
       title: 'Total Users', 
-      value: statsData.totalUsers.toLocaleString(), 
+      value: (statsData.totalUsers || 0).toLocaleString(), 
       icon: <Users size={24} />, 
       trend: '+12%',
       trendUp: true,

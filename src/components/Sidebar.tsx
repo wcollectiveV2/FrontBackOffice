@@ -22,8 +22,15 @@ export const Sidebar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Get user from localStorage to check roles
-  const userJson = localStorage.getItem('adminUser');
-  const user = userJson ? JSON.parse(userJson) : null;
+  let user = null;
+  try {
+    const userJson = localStorage.getItem('adminUser');
+    if (userJson && userJson !== 'undefined' && userJson !== 'null') {
+      user = JSON.parse(userJson);
+    }
+  } catch (e) {
+    console.error('Error parsing adminUser:', e);
+  }
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   
   const hasRole = (requiredRoles?: string[]) => {
@@ -48,63 +55,39 @@ export const Sidebar = () => {
   const menuItems = allMenuItems.filter(item => hasRole(item.requiredRoles));
 
   return (
-    <div className="sidebar" style={{
-      width: '250px',
-      height: '100vh',
-      backgroundColor: '#1E293B',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'fixed',
-      left: 0,
-      top: 0
-    }}>
-      <div style={{ padding: '24px', borderBottom: '1px solid #334155' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>ChrisLO Admin</h1>
+    <div className="fixed left-0 top-0 h-screen w-[250px] flex flex-col bg-[#1E293B] text-white">
+      <div className="p-6 border-b border-slate-700">
+        <h1 className="text-xl font-bold">ChrisLO Admin</h1>
       </div>
 
-      <nav style={{ flex: 1, padding: '20px 0' }}>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {menuItems.map((item) => (
-            <li key={item.path}>
-              <Link 
-                to={item.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 24px',
-                  color: isActive(item.path) ? '#ffffff' : '#94A3B8',
-                  backgroundColor: isActive(item.path) ? '#334155' : 'transparent',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                  fontWeight: isActive(item.path) ? '600' : '400',
-                  borderLeft: isActive(item.path) ? '4px solid #3B82F6' : '4px solid transparent'
-                }}
-              >
-                {item.icon}
-                <span>{item.title}</span>
-              </Link>
-            </li>
-          ))}
+      <nav className="flex-1 py-5">
+        <ul className="list-none p-0 m-0">
+          {menuItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <li key={item.path}>
+                <Link 
+                  to={item.path}
+                  className={`flex items-center gap-3 px-6 py-3 transition-all duration-200 border-l-4 ${
+                    active 
+                      ? 'text-white bg-slate-700 font-semibold border-primary' 
+                      : 'text-slate-400 font-normal border-transparent hover:bg-slate-800/50'
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.title}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-      <div style={{ padding: '24px', borderTop: '1px solid #334155' }}>
+      <div className="p-6 border-t border-slate-700">
         <button 
           onClick={handleLogout}
-          style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          background: 'none',
-          border: 'none',
-          color: '#ef4444',
-          cursor: 'pointer',
-          width: '100%',
-          padding: '12px 0',
-          fontSize: '14px'
-        }}>
+          className="flex items-center gap-3 w-full bg-transparent border-none text-red-500 cursor-pointer text-sm hover:text-red-400"
+        >
           <LogOut size={20} />
           <span>Sign Out</span>
         </button>

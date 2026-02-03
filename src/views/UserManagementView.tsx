@@ -31,7 +31,15 @@ export const UserManagementView = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]); // Strings now
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('adminToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
   
   // Filter users based on search query
   const filteredUsers = users.filter(user => {
@@ -46,7 +54,7 @@ export const UserManagementView = () => {
 
   const fetchUsers = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/users`)
+    fetch(`${API_URL}/api/users`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => {
         setUsers(data); 
@@ -92,7 +100,7 @@ export const UserManagementView = () => {
         
         await fetch(`${API_URL}/api/users/${userId}/roles`, {
              method: 'PUT',
-             headers: { 'Content-Type': 'application/json' },
+             headers: getAuthHeaders(),
              body: JSON.stringify({ roles: selectedRoles })
         });
          
@@ -110,7 +118,7 @@ export const UserManagementView = () => {
       try {
           const res = await fetch(`${API_URL}/api/users`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: getAuthHeaders(),
               body: JSON.stringify(newUser)
           });
           

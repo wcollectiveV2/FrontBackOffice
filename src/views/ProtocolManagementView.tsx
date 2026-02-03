@@ -54,12 +54,15 @@ interface LeaderboardEntry {
     isCurrentUser: boolean;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const HABIT_SERVICE_URL = `${API_URL}/api`;
-const USER_SERVICE_URL = `${API_URL}/api`;
+// Ensure correct API URL handling
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
+// All service URLs should point to the base + /api
+const API_URL = `${API_BASE}/api`;
+const HABIT_SERVICE_URL = API_URL;
+const USER_SERVICE_URL = API_URL;
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('adminToken');
   return {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -741,82 +744,6 @@ export const ProtocolManagementView = () => {
                         <List size={64} className="mb-4 opacity-50" />
                         <p className="text-lg">Select a protocol to view details</p>
                         <p className="text-sm">Or create a new one from the sidebar</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-                                    <div>
-                                        <label className="block mb-1">Select Target</label>
-                                        <select 
-                                            className="w-full p-2 border rounded"
-                                            value={assignTarget.id}
-                                            onChange={e => setAssignTarget({...assignTarget, id: e.target.value})}
-                                        >
-                                            <option value="">Select...</option>
-                                            {/* Logic for Groups vs Users */}
-                                            {assignTarget.type === 'USER' && users.map(u => (
-                                                <option key={u.id} value={u.id}>{u.email}</option>
-                                            ))}
-                                            {/* Mock for Groups */}
-                                            {assignTarget.type !== 'USER' && (
-                                                <>
-                                                    <option value="g1">Group Alpha</option>
-                                                    <option value="g2">Group Beta</option>
-                                                </>
-                                            )}
-                                        </select>
-                                    </div>
-                                    <button 
-                                        onClick={handleAssign}
-                                        className="bg-indigo-600 text-white px-6 py-2 rounded"
-                                    >
-                                        Assign Protocol
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Leaderboard Tab */}
-                        {activeTab === 'leaderboard' && (
-                            <div className="bg-white rounded shadow overflow-hidden">
-                                <div className="p-4 border-b bg-gray-50 flex items-center gap-2">
-                                    <Trophy className="text-yellow-500" /> Leaderboard
-                                </div>
-                                <table className="w-full">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="p-3 text-left">Rank</th>
-                                            <th className="p-3 text-left">User</th>
-                                            <th className="p-3 text-right">Score</th>
-                                            <th className="p-3 text-right">Completions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {leaderboard.map((entry, idx) => (
-                                            <tr key={idx} className="border-t">
-                                                <td className="p-3 font-bold text-gray-500">#{idx + 1}</td>
-                                                <td className="p-3">
-                                                    {users.find(u => u.id === entry.userId)?.email || `User ${entry.userId}`}
-                                                </td>
-                                                <td className="p-3 text-right font-bold">{entry.score}</td>
-                                                <td className="p-3 text-right text-gray-600">{entry.completionCount}</td>
-                                            </tr>
-                                        ))}
-                                        {leaderboard.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="p-8 text-center text-gray-500">No data found</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="h-full flex items-center justify-center text-gray-400">
-                        Select a protocol to view details
                     </div>
                 )}
             </div>

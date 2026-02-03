@@ -15,8 +15,9 @@ export const LoginView = () => {
     setError('');
 
     try {
-      // In a real app, use the API_URL env var
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      // Use centralized API URL to avoid double defaults and path issues
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const API_URL = baseUrl.replace(/\/api\/?$/, '');
       
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
@@ -32,7 +33,12 @@ export const LoginView = () => {
 
       // Store token
       localStorage.setItem('adminToken', data.accessToken);
-      localStorage.setItem('adminUser', JSON.stringify(data.user));
+      if (data.user) {
+        localStorage.setItem('adminUser', JSON.stringify(data.user));
+      } else {
+        // Fallback or just don't set it if missing to avoid "undefined" string
+        console.warn('User data missing in login response');
+      }
 
       // Redirect to dashboard
       navigate('/');
@@ -49,89 +55,50 @@ export const LoginView = () => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '100vh',
-      backgroundColor: '#F1F5F9'
-    }}>
-      <div style={{ 
-        width: '100%', 
-        maxWidth: '400px', 
-        padding: '40px', 
-        backgroundColor: 'white', 
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#0F172A' }}>Admin Portal</h1>
-          <p style={{ color: '#64748B', marginTop: '8px' }}>Sign in to manage the ecosystem</p>
+    <div className="flex items-center justify-center min-h-screen bg-slate-100">
+      <div className="w-full max-w-[400px] p-10 bg-white rounded-xl shadow-lg">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Admin Portal</h1>
+          <p className="text-slate-500 mt-2">Sign in to manage the ecosystem</p>
         </div>
 
         {error && (
-          <div style={{ 
-            backgroundColor: '#FEE2E2', 
-            border: '1px solid #FECACA', 
-            borderRadius: '6px', 
-            padding: '12px', 
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            color: '#991B1B',
-            fontSize: '14px'
-          }}>
-            <AlertCircle size={16} style={{ marginRight: '8px' }} />
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-5 flex items-center text-red-800 text-sm">
+            <AlertCircle size={16} className="mr-2" />
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#334155' }}>
+          <div className="mb-5">
+            <label className="block mb-2 text-sm font-medium text-slate-700">
               Email Address
             </label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={20} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94A3B8' }} />
+            <div className="relative">
+              <Mail size={20} className="absolute left-3 top-3 text-slate-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 10px 10px 40px', 
-                  borderRadius: '6px', 
-                  border: '1px solid #E2E8F0',
-                  outline: 'none',
-                  fontSize: '16px',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full pl-10 pr-3 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
                 placeholder="admin@wcollective.com"
               />
             </div>
           </div>
 
-          <div style={{ marginBottom: '30px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#334155' }}>
+          <div className="mb-8">
+            <label className="block mb-2 text-sm font-medium text-slate-700">
               Password
             </label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={20} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94A3B8' }} />
+            <div className="relative">
+              <Lock size={20} className="absolute left-3 top-3 text-slate-400" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 10px 10px 40px', 
-                  borderRadius: '6px', 
-                  border: '1px solid #E2E8F0',
-                  outline: 'none',
-                  fontSize: '16px',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full pl-10 pr-3 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
                 placeholder="••••••••"
               />
             </div>
@@ -140,18 +107,7 @@ export const LoginView = () => {
           <button
             type="submit"
             disabled={isLoading}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              backgroundColor: '#0F172A', 
-              color: 'white', 
-              borderRadius: '6px', 
-              border: 'none', 
-              fontSize: '16px', 
-              fontWeight: '600',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.7 : 1
-            }}
+            className="w-full py-3 bg-primary text-white rounded-md font-semibold hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>

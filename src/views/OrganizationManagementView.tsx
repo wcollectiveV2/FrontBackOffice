@@ -16,11 +16,20 @@ export const OrganizationManagementView = () => {
     const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
     const [formData, setFormData] = useState({ name: '', logo_url: '' });
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Handle API URL from env var or default to backend port
+    const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
+
+    const getAuthHeaders = () => {
+      const token = localStorage.getItem('adminToken');
+      return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+    };
 
     const fetchOrgs = () => {
          setLoading(true);
-         fetch(`${API_URL}/api/organizations`)
+         fetch(`${API_URL}/api/organizations`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 setOrgs(Array.isArray(data) ? data : []);
@@ -41,7 +50,7 @@ export const OrganizationManagementView = () => {
         try {
             const res = await fetch(`${API_URL}/api/organizations`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(formData)
             });
             if (res.ok) {
@@ -62,7 +71,7 @@ export const OrganizationManagementView = () => {
         try {
             const res = await fetch(`${API_URL}/api/organizations/${selectedOrg.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(formData)
             });
             if (res.ok) {
@@ -82,7 +91,8 @@ export const OrganizationManagementView = () => {
         if (!confirm('Are you sure you want to delete this organization?')) return;
         try {
             const res = await fetch(`${API_URL}/api/organizations/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
             if (res.ok) fetchOrgs();
             else alert('Failed to delete');
