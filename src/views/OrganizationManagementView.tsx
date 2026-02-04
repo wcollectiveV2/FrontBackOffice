@@ -1,197 +1,322 @@
 import { useState, useEffect } from 'react';
-import { Search, Building2, UserPlus, Pencil, Trash, Plus, Check, X } from 'lucide-react';
+import { Building2, Pencil, Trash2, Plus, Globe, Calendar, Users, MoreHorizontal, Search, ExternalLink } from 'lucide-react';
+import { 
+  Card, 
+  CardBody,
+  Button, 
+  Badge, 
+  Avatar,
+  Modal, 
+  ModalHeader, 
+  ModalBody, 
+  ModalFooter,
+  FormField,
+  Input,
+  SearchInput,
+  PageHeader,
+  Skeleton,
+  DropdownMenu,
+  EmptyState,
+  cn 
+} from '../components/ui/index';
+import { organizationsApi, Organization, ApiError } from '../services/api';
 
+// ============================================
+// TYPES
+// ============================================
 interface Organization {
   id: string;
   name: string;
   logo_url?: string;
   created_at: string;
+  member_count?: number;
 }
 
-export const OrganizationManagementView = () => {
-    const [orgs, setOrgs] = useState<Organization[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-    const [formData, setFormData] = useState({ name: '', logo_url: '' });
+// ============================================
+// ORGANIZATION CARD COMPONENT
+// ============================================
+interface OrgCardProps {
+  org: Organization;
+  onEdit: () => void;
+  onDelete: () => void;
+}
 
-    // Handle API URL from env var or default to backend port
-    const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
-
-    const getAuthHeaders = () => {
-      const token = localStorage.getItem('adminToken');
-      return {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      };
-    };
-
-    const fetchOrgs = () => {
-         setLoading(true);
-         fetch(`${API_URL}/api/organizations`, { headers: getAuthHeaders() })
-            .then(res => res.json())
-            .then(data => {
-                setOrgs(Array.isArray(data) ? data : []);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
-    };
-
-    useEffect(() => {
-        fetchOrgs();
-    }, []);
-
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const res = await fetch(`${API_URL}/api/organizations`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(formData)
-            });
-            if (res.ok) {
-                setShowCreateModal(false);
-                setFormData({ name: '', logo_url: '' });
-                fetchOrgs();
-            } else {
-                alert('Failed to create organization');
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleUpdate = async (e: React.FormEvent) => {
-         e.preventDefault();
-        if (!selectedOrg) return;
-        try {
-            const res = await fetch(`${API_URL}/api/organizations/${selectedOrg.id}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(formData)
-            });
-            if (res.ok) {
-                setShowEditModal(false);
-                setSelectedOrg(null);
-                setFormData({ name: '', logo_url: '' });
-                fetchOrgs();
-            } else {
-                alert('Failed to update');
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }
-    
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this organization?')) return;
-        try {
-            const res = await fetch(`${API_URL}/api/organizations/${id}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            });
-            if (res.ok) fetchOrgs();
-            else alert('Failed to delete');
-        } catch (err) {
-            console.error(err);
-        }
-    }
-    
-    const openEdit = (org: Organization) => {
-        setSelectedOrg(org);
-        setFormData({ name: org.name, logo_url: org.logo_url || '' });
-        setShowEditModal(true);
-    }
-
-    return (
-        <div>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '28px', color: '#1E293B' }}>Organizations Management</h1>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  style={{
-                    backgroundColor: '#3B82F6',
-                    color: 'white', border: 'none', borderRadius: '8px',
-                    padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
-                  }}
-                >
-                    <Plus size={18} /> New Organization
-                </button>
-           </div>
-           
-           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-               {loading ? <p>Loading...</p> : orgs.map(org => (
-                   <div key={org.id} style={{
-                       backgroundColor: 'white', borderRadius: '12px', padding: '24px',
-                       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                       display: 'flex', flexDirection: 'column', gap: '16px'
-                   }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                           <div style={{
-                               width: '48px', height: '48px', borderRadius: '8px',
-                               backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                               color: '#94A3B8'
-                           }}>
-                               {org.logo_url ? <img src={org.logo_url} style={{width:'100%', height:'100%', borderRadius:'8px'}}/> : <Building2 size={24} />}
-                           </div>
-                           <div>
-                               <h3 style={{ margin: 0, fontSize: '18px', color: '#1E293B' }}>{org.name}</h3>
-                               <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94A3B8' }}>Created: {new Date(org.created_at).toLocaleDateString()}</p>
-                           </div>
-                       </div>
-                       
-                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: 'auto' }}>
-                            <button 
-                                onClick={() => openEdit(org)}
-                                style={{ padding: '8px', background: '#EFF6FF', color: '#3B82F6', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                                <Pencil size={16} />
-                            </button>
-                            <button 
-                                onClick={() => handleDelete(org.id)}
-                                style={{ padding: '8px', background: '#FEF2F2', color: '#EF4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                                <Trash size={16} />
-                            </button>
-                       </div>
-                   </div>
-               ))}
-           </div>
-           
-           {(showCreateModal || showEditModal) && (
-             <div style={{
-                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                  backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-              }}>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '400px' }}>
-                   <h2>{showEditModal ? 'Edit Organization' : 'Create Organization'}</h2>
-                   <form onSubmit={showEditModal ? handleUpdate : handleCreate}>
-                        <div style={{ marginBottom: '16px' }}>
-                              <label style={{ display: 'block', marginBottom: '8px' }}>Name</label>
-                              <input 
-                                  required value={formData.name}
-                                  onChange={e => setFormData({...formData, name: e.target.value})}
-                                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
-                              />
-                        </div>
-                        <div style={{ marginBottom: '16px' }}>
-                              <label style={{ display: 'block', marginBottom: '8px' }}>Logo URL</label>
-                              <input 
-                                   value={formData.logo_url}
-                                  onChange={e => setFormData({...formData, logo_url: e.target.value})}
-                                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
-                              />
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                              <button type="button" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={{ padding: '8px 16px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', cursor:'pointer' }}>Cancel</button>
-                              <button type="submit" style={{ padding: '8px 16px', background: '#3B82F6', color:'white', border: 'none', borderRadius: '6px', cursor:'pointer' }}>Save</button>
-                        </div>
-                   </form>
-                </div>
-             </div>
-           )}
+const OrgCard = ({ org, onEdit, onDelete }: OrgCardProps) => (
+  <Card hoverable className="group relative overflow-hidden">
+    <CardBody className="p-5">
+      {/* Actions dropdown */}
+      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu
+          trigger={
+            <button className="icon-btn icon-btn-sm bg-white shadow-sm">
+              <MoreHorizontal size={16} />
+            </button>
+          }
+          items={[
+            { label: 'Edit organization', icon: <Pencil size={14} />, onClick: onEdit },
+            { label: 'View members', icon: <Users size={14} />, onClick: () => {} },
+            { divider: true, label: '' },
+            { label: 'Delete organization', icon: <Trash2 size={14} />, danger: true, onClick: onDelete },
+          ]}
+        />
+      </div>
+      
+      {/* Logo & Info */}
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {org.logo_url ? (
+            <img src={org.logo_url} className="w-full h-full object-cover" alt={org.name}/>
+          ) : (
+            <Building2 size={24} className="text-slate-400" />
+          )}
         </div>
-    );
-}
+        <div className="flex-1 min-w-0 pt-1">
+          <h3 className="text-base font-semibold text-slate-900 truncate pr-8" title={org.name}>
+            {org.name}
+          </h3>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+            <Calendar size={12} />
+            <span>Created {new Date(org.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Stats */}
+      <div className="flex items-center gap-4 mt-5 pt-4 border-t border-slate-100">
+        <div className="flex items-center gap-2">
+          <Users size={14} className="text-slate-400" />
+          <span className="text-sm text-slate-600">
+            {org.member_count || 0} members
+          </span>
+        </div>
+        <Badge variant="success" size="sm" dot>Active</Badge>
+      </div>
+    </CardBody>
+  </Card>
+);
+
+// ============================================
+// SKELETON CARD
+// ============================================
+const OrgCardSkeleton = () => (
+  <Card className="p-5">
+    <div className="flex items-start gap-4">
+      <Skeleton width={56} height={56} className="rounded-xl" />
+      <div className="space-y-2 flex-1">
+        <Skeleton width="70%" height={20} />
+        <Skeleton width="50%" height={14} />
+      </div>
+    </div>
+    <div className="flex items-center gap-4 mt-5 pt-4 border-t border-slate-100">
+      <Skeleton width={80} height={16} />
+      <Skeleton width={60} height={20} className="rounded-full" />
+    </div>
+  </Card>
+);
+
+// ============================================
+// ORGANIZATION MANAGEMENT VIEW
+// ============================================
+export const OrganizationManagementView = () => {
+  const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formData, setFormData] = useState({ name: '', logo_url: '' });
+
+  const filteredOrgs = orgs.filter(org => {
+    if (!searchQuery.trim()) return true;
+    return org.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const fetchOrgs = async () => {
+    setLoading(true);
+    try {
+      const data = await organizationsApi.list();
+      setOrgs(data);
+    } catch (err) {
+      console.error('Failed to fetch organizations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrgs();
+  }, []);
+
+  const openCreateModal = () => {
+    setEditingOrg(null);
+    setFormData({ name: '', logo_url: '' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (org: Organization) => {
+    setEditingOrg(org);
+    setFormData({ name: org.name, logo_url: org.logo_url || '' });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingOrg(null);
+    setFormData({ name: '', logo_url: '' });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (editingOrg) {
+        await organizationsApi.update(editingOrg.id, formData);
+      } else {
+        await organizationsApi.create(formData);
+      }
+      closeModal();
+      fetchOrgs();
+    } catch (err) {
+      console.error('Save organization error:', err);
+      alert(`Failed to ${editingOrg ? 'update' : 'create'} organization`);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this organization? This action cannot be undone.')) return;
+    
+    try {
+      await organizationsApi.delete(id);
+      fetchOrgs();
+    } catch (err) {
+      console.error('Delete organization error:', err);
+      alert('Failed to delete organization');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Organizations"
+        description="Manage partner organizations and their settings"
+        actions={
+          <Button variant="primary" leftIcon={<Plus size={16} />} onClick={openCreateModal}>
+            New Organization
+          </Button>
+        }
+      />
+
+      {/* Search & Filters */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 max-w-md">
+            <SearchInput
+              placeholder="Search organizations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Building2 size={16} />
+            <span>{orgs.length} organizations</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Organizations Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <OrgCardSkeleton />
+          <OrgCardSkeleton />
+          <OrgCardSkeleton />
+        </div>
+      ) : filteredOrgs.length === 0 ? (
+        <Card className="p-12">
+          <EmptyState
+            icon={<Building2 size={48} />}
+            title={searchQuery ? 'No organizations found' : 'No organizations yet'}
+            description={searchQuery 
+              ? `No organizations matching "${searchQuery}"` 
+              : 'Create your first organization to get started'
+            }
+            action={!searchQuery && (
+              <Button variant="primary" leftIcon={<Plus size={16} />} onClick={openCreateModal}>
+                Create Organization
+              </Button>
+            )}
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredOrgs.map(org => (
+            <OrgCard 
+              key={org.id} 
+              org={org} 
+              onEdit={() => openEditModal(org)}
+              onDelete={() => handleDelete(org.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit Modal */}
+      <Modal isOpen={showModal} onClose={closeModal} size="md">
+        <ModalHeader>
+          {editingOrg ? 'Edit Organization' : 'Create Organization'}
+        </ModalHeader>
+        <form onSubmit={handleSubmit}>
+          <ModalBody className="space-y-5">
+            <FormField label="Organization Name" required>
+              <Input
+                required
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                placeholder="Acme Corporation"
+                leftIcon={<Building2 size={16} />}
+              />
+            </FormField>
+            
+            <FormField 
+              label="Logo URL" 
+              hint="Enter the URL of the organization's logo image"
+            >
+              <Input
+                type="url"
+                value={formData.logo_url}
+                onChange={e => setFormData({...formData, logo_url: e.target.value})}
+                placeholder="https://example.com/logo.png"
+                leftIcon={<Globe size={16} />}
+              />
+            </FormField>
+
+            {/* Logo Preview */}
+            {formData.logo_url && (
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+                <div className="w-12 h-12 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                  <img 
+                    src={formData.logo_url} 
+                    alt="Logo preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+                <div className="text-sm text-slate-600">Logo Preview</div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" type="button" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              {editingOrg ? 'Save Changes' : 'Create Organization'}
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+    </div>
+  );
+};

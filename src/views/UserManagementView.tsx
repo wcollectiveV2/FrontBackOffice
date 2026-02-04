@@ -1,47 +1,44 @@
 import { useState, useEffect } from 'react';
-import { Search, UserCog, Check, X, Plus, UserPlus } from 'lucide-react';
+import { Search, UserCog, Check, X, Plus, Filter, MoreHorizontal, Mail, Shield, Users as UsersIcon, Trash2, Download } from 'lucide-react';
+import { 
+  Card, 
+  Button, 
+  SearchInput, 
+  Badge, 
+  Avatar, 
+  Modal, 
+  ModalHeader, 
+  ModalBody, 
+  ModalFooter,
+  FormField,
+  Input,
+  Checkbox,
+  Table,
+  TableColumn,
+  Skeleton,
+  DropdownMenu,
+  PageHeader,
+  EmptyState,
+  cn 
+} from '../components/ui/index';
+import { usersApi, groupsApi, User, Group, ApiError } from '../services/api';
 
-interface Group {
-  id: string; // Updated to string (UUID)
-  name: string;
-  type: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  roles: string[];
-  groups: Group[];
-  createdAt: string;
-}
-
+// ============================================
+// USER MANAGEMENT VIEW
+// ============================================
 export const UserManagementView = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // State for Add Modal
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', name: '', roles: ['user'], groupIds: [] as string[] });
-
-  // Temporary state for editing
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]); // Strings now
-
-  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('adminToken');
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-  };
+  const [showEditModal, setShowEditModal] = useState(false);
   
-  // Filter users based on search query
+  // Form states
+  const [newUser, setNewUser] = useState({ email: '', name: '', roles: ['user'], groupIds: [] as string[] });
+  const [editForm, setEditForm] = useState({ roles: [] as string[], groupIds: [] as string[] });
+  
   const filteredUsers = users.filter(user => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -52,327 +49,355 @@ export const UserManagementView = () => {
     );
   });
 
-  const fetchUsers = () => {
+  const fetchUsers = async () => {
     setLoading(true);
-    fetch(`${API_URL}/api/users`, { headers: getAuthHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        setUsers(data); 
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    try {
+      const data = await usersApi.list();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   
-  const fetchGroups = () => {
-      fetch(`${API_URL}/api/groups`)
-        .then(res => res.json())
-        .then(setAvailableGroups)
-        .catch(console.error);
-  }
+  const fetchGroups = async () => {
+    try {
+      const data = await groupsApi.list();
+      setAvailableGroups(data);
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
     fetchGroups();
   }, []);
   
-  const startEditing = (user: User) => {
-      setEditingId(user.id);
-      setSelectedRoles(user.roles || []);
-      setSelectedGroupIds(user.groups ? user.groups.map(g => g.id) : []);
-  }
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      roles: user.roles || [],
+      groupIds: user.groups ? user.groups.map(g => g.id) : []
+    });
+    setShowEditModal(true);
+  };
 
-  const saveChanges = async (userId: string) => {
+  const saveChanges = async () => {
+    if (!editingUser) return;
+    
     try {
-        // Here we ideally send one request with both updates or keep separate
-        // For simplicity reusing existing endpoints if available or creating update endpoint
-        // Previously we had /api/users/:id/roles and /api/users/:id/groups
-        // I will assume those exist or I should have added them.
-        
-        // Wait, I only added POST /api/users and GET /api/users
-        // I need to ensure the PUT endpoints work.
-        // But for now, let's implement the Add User feature primarily requested.
-        
-        // Mocking save for now as I need to verify PUT endpoints on backend
-        // Let's assume they work as per previous code structure
-        
-        await fetch(`${API_URL}/api/users/${userId}/roles`, {
-             method: 'PUT',
-             headers: getAuthHeaders(),
-             body: JSON.stringify({ roles: selectedRoles })
-        });
-         
-        // Refetch to be safe
-        fetchUsers();
-        setEditingId(null);
-    } catch (e) {
-        console.error(e);
-        alert('Failed to save changes');
+      await usersApi.updateRoles(editingUser.id, editForm.roles);
+      fetchUsers();
+      setShowEditModal(false);
+      setEditingUser(null);
+    } catch (err) {
+      console.error('Save changes error:', err);
+      alert('Failed to save changes');
     }
   };
   
   const handleAddUser = async (e: React.FormEvent) => {
-      e.preventDefault();
-      try {
-          const res = await fetch(`${API_URL}/api/users`, {
-              method: 'POST',
-              headers: getAuthHeaders(),
-              body: JSON.stringify(newUser)
-          });
-          
-          if (!res.ok) throw new Error('Failed to create user');
-          
-          setShowAddModal(false);
-          setNewUser({ email: '', name: '', roles: ['user'], groupIds: [] });
-          fetchUsers();
-      } catch (err) {
-          alert('Error creating user');
-      }
-  }
+    e.preventDefault();
+    try {
+      await usersApi.create(newUser);
+      setShowAddModal(false);
+      setNewUser({ email: '', name: '', roles: ['user'], groupIds: [] });
+      fetchUsers();
+    } catch (err) {
+      console.error('Create user error:', err);
+      alert('Error creating user');
+    }
+  };
 
-  const toggleRole = (role: string, targetState: string[], setTargetState: (s: string[]) => void) => {
-      if (targetState.includes(role)) {
-          setTargetState(targetState.filter(r => r !== role));
-      } else {
-          setTargetState([...targetState, role]);
-      }
-  }
-
-  const toggleGroup = (groupId: string, targetState: string[], setTargetState: (s: string[]) => void) => {
-      if (targetState.includes(groupId)) {
-          setTargetState(targetState.filter(id => id !== groupId));
-      } else {
-          setTargetState([...targetState, groupId]);
-      }
-  }
+  const toggleRole = (role: string, current: string[], setCurrent: (r: string[]) => void) => {
+    if (current.includes(role)) {
+      setCurrent(current.filter(r => r !== role));
+    } else {
+      setCurrent([...current, role]);
+    }
+  };
 
   const availableRoles = ['user', 'admin', 'coach', 'manager', 'protocol_manager', 'retreat_manager'];
 
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-         <h1 style={{ fontSize: '28px', color: '#1E293B' }}>User Management</h1>
-         <div style={{ display: 'flex', gap: '12px' }}>
-             <div style={{ position: 'relative' }}>
-                <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
-                <input 
-                  placeholder="Search users..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ 
-                    padding: '10px 10px 10px 40px', 
-                    borderRadius: '8px', 
-                    border: '1px solid #CBD5E1', 
-                    width: '300px',
-                    outline: 'none'
-                  }}
-                />
-             </div>
-             <button 
-                onClick={() => setShowAddModal(true)}
-                style={{
-                    backgroundColor: '#3B82F6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '10px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                }}
-             >
-                <Plus size={18} /> Add User
-             </button>
-         </div>
-      </div>
+  const getRoleBadgeVariant = (role: string): 'primary' | 'success' | 'warning' | 'error' | 'neutral' => {
+    switch (role) {
+      case 'admin': return 'primary';
+      case 'coach': return 'success';
+      case 'manager': return 'warning';
+      default: return 'neutral';
+    }
+  };
 
-      {showAddModal && (
-          <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-          }}>
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%' }}>
-                  <h2 style={{ marginTop: 0 }}>Add New User</h2>
-                  <form onSubmit={handleAddUser}>
-                      <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Email</label>
-                          <input 
-                              type="email" required
-                              value={newUser.email}
-                              onChange={e => setNewUser({...newUser, email: e.target.value})}
-                              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}
-                          />
-                      </div>
-                      <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Name</label>
-                          <input 
-                              type="text" required
-                              value={newUser.name}
-                              onChange={e => setNewUser({...newUser, name: e.target.value})}
-                              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}
-                          />
-                      </div>
-                      
-                      <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Roles</label>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                              {availableRoles.map(role => (
-                                  <button
-                                      key={role}
-                                      type="button"
-                                      onClick={() => toggleRole(role, newUser.roles, (r) => setNewUser({...newUser, roles: r}))}
-                                      style={{
-                                          padding: '4px 12px',
-                                          borderRadius: '999px',
-                                          border: newUser.roles.includes(role) ? '1px solid #3B82F6' : '1px solid #CBD5E1',
-                                          backgroundColor: newUser.roles.includes(role) ? '#EFF6FF' : 'white',
-                                          color: newUser.roles.includes(role) ? '#1E40AF' : '#64748B',
-                                          cursor: 'pointer',
-                                          fontSize: '12px'
-                                      }}
-                                  >
-                                      {role}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-
-                      <div style={{ marginBottom: '24px' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Add to Groups</label>
-                          <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '8px' }}>
-                              {availableGroups.length === 0 ? <p style={{ color: '#94A3B8', fontSize: '13px' }}>No groups available</p> :
-                               availableGroups.map(group => (
-                                  <label key={group.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px', cursor: 'pointer' }}>
-                                      <input 
-                                          type="checkbox"
-                                          checked={newUser.groupIds.includes(group.id)}
-                                          onChange={() => toggleGroup(group.id, newUser.groupIds, (IDs) => setNewUser({...newUser, groupIds: IDs}))}
-                                      />
-                                      {group.name}
-                                  </label>
-                              ))}
-                          </div>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                          <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #CBD5E1', background: 'white', cursor: 'pointer' }}>Cancel</button>
-                          <button type="submit" style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#3B82F6', color: 'white', cursor: 'pointer' }}>Create User</button>
-                      </div>
-                  </form>
-              </div>
+  // Table columns definition
+  const columns: TableColumn<User>[] = [
+    {
+      key: 'user',
+      header: 'User',
+      render: (user) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={user.name || user.email} size="sm" />
+          <div className="min-w-0">
+            <p className="font-medium text-slate-900 truncate">{user.name || 'Unknown'}</p>
+            <p className="text-xs text-slate-500 truncate">{user.email}</p>
           </div>
-      )}
+        </div>
+      )
+    },
+    {
+      key: 'roles',
+      header: 'Roles',
+      render: (user) => (
+        <div className="flex flex-wrap gap-1">
+          {user.roles?.length > 0 ? user.roles.map(role => (
+            <Badge key={role} variant={getRoleBadgeVariant(role)}>
+              {role}
+            </Badge>
+          )) : <span className="text-slate-400 text-xs">No roles</span>}
+        </div>
+      )
+    },
+    {
+      key: 'groups',
+      header: 'Groups',
+      render: (user) => (
+        <div className="flex flex-wrap gap-1">
+          {user.groups?.length > 0 ? user.groups.map(group => (
+            <Badge key={group.id} variant="neutral">
+              {group.name}
+            </Badge>
+          )) : <span className="text-slate-400 text-xs">No groups</span>}
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '80px',
+      className: 'text-right',
+      render: (user) => (
+        <DropdownMenu
+          trigger={
+            <button className="icon-btn icon-btn-sm opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreHorizontal size={16} />
+            </button>
+          }
+          items={[
+            { label: 'Edit user', icon: <UserCog size={14} />, onClick: () => openEditModal(user) },
+            { label: 'Send email', icon: <Mail size={14} />, onClick: () => {} },
+            { divider: true, label: '' },
+            { label: 'Delete user', icon: <Trash2 size={14} />, danger: true, onClick: () => {} },
+          ]}
+        />
+      )
+    }
+  ];
 
-      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-            <tr>
-              <th style={{ padding: '16px 24px', fontSize: '12px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>User</th>
-              <th style={{ padding: '16px 24px', fontSize: '12px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Roles</th>
-              <th style={{ padding: '16px 24px', fontSize: '12px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Groups</th> 
-              <th style={{ padding: '16px 24px', fontSize: '12px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-               <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center' }}>Loading users...</td></tr>
-            ) : filteredUsers.length === 0 ? (
-               <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
-                 {searchQuery ? `No users found matching "${searchQuery}"` : 'No users found'}
-               </td></tr>
-            ) : filteredUsers.map(user => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
-                  <div style={{ fontWeight: '500', color: '#1E293B' }}>{user.name || user.email}</div>
-                  <div style={{ fontSize: '12px', color: '#64748B' }}>{user.email}</div>
-                </td>
-                
-                {/* Roles Column */}
-                <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
-                   {editingId === user.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                         {availableRoles.map(role => (
-                             <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                                 <input 
-                                    type="checkbox" 
-                                    checked={selectedRoles.includes(role)} 
-                                    onChange={() => toggleRole(role, selectedRoles, setSelectedRoles)}
-                                 />
-                                 {role}
-                             </label>
-                         ))}
-                      </div>
-                   ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {user.roles?.map(role => (
-                            <span key={role} style={{ 
-                                padding: '2px 8px', 
-                                borderRadius: '9999px', 
-                                fontSize: '11px', 
-                                fontWeight: '600',
-                                backgroundColor: role === 'admin' ? '#DBEAFE' : role === 'coach' ? '#DCFCE7' : '#F1F5F9',
-                                color: role === 'admin' ? '#1E40AF' : role === 'coach' ? '#166534' : '#475569',
-                            }}>
-                                {role}
-                            </span>
-                        )) || '-'}
-                      </div>
-                   )}
-                </td>
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Users"
+        description="Manage user accounts, roles, and permissions"
+        actions={
+          <>
+            <Button variant="outline" leftIcon={<Download size={16} />}>
+              Export
+            </Button>
+            <Button variant="primary" leftIcon={<Plus size={16} />} onClick={() => setShowAddModal(true)}>
+              Add User
+            </Button>
+          </>
+        }
+      />
 
-                {/* Groups Column */}
-                <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
-                   {/* Editing groups usually complex if user manages many, showing list here for now */}
-                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {user.groups?.map(group => (
-                            <span key={group.id} style={{ 
-                                padding: '2px 8px', 
-                                borderRadius: '4px', 
-                                fontSize: '11px', 
-                                border: '1px solid #E2E8F0',
-                                color: '#475569',
-                            }}>
-                                {group.name}
-                            </span>
-                        ))}
-                        {(!user.groups || user.groups.length === 0) && <span style={{ color: '#94A3B8', fontSize: '12px' }}>No groups</span>}
-                   </div>
-                </td>
+      {/* Filters Card */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <SearchInput
+              placeholder="Search by name, email, or role..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" leftIcon={<Filter size={16} />}>
+              Filters
+            </Button>
+          </div>
+        </div>
+        
+        {/* Quick Stats */}
+        <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center gap-2 text-sm">
+            <UsersIcon size={16} className="text-slate-400" />
+            <span className="text-slate-600">{users.length} total users</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Shield size={16} className="text-slate-400" />
+            <span className="text-slate-600">{users.filter(u => u.roles?.includes('admin')).length} admins</span>
+          </div>
+        </div>
+      </Card>
 
-                <td style={{ padding: '16px 24px', textAlign: 'right', verticalAlign: 'top' }}>
-                   {editingId === user.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                          <button 
-                            onClick={() => saveChanges(user.id)}
-                            style={{ color: '#166534', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                             <Check size={16} /> Save
-                          </button>
-                          <button 
-                            onClick={() => setEditingId(null)}
-                            style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                             <X size={16} /> Cancel
-                          </button>
-                      </div>
-                   ) : (
-                      <button 
-                        onClick={() => startEditing(user)}
-                        style={{ color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                         <UserCog size={16} /> Edit
-                      </button>
-                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Users Table */}
+      <Card>
+        <Table
+          columns={columns}
+          data={filteredUsers}
+          keyExtractor={(user) => user.id}
+          loading={loading}
+        emptyMessage={searchQuery ? `No users found matching "${searchQuery}"` : 'No users found'}
+          onRowClick={openEditModal}
+        />
+      </Card>
+
+      {/* Add User Modal */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} size="lg">
+        <ModalHeader>Add New User</ModalHeader>
+        <form onSubmit={handleAddUser}>
+          <ModalBody className="space-y-5">
+            <FormField label="Email Address" required>
+              <Input
+                type="email"
+                required
+                value={newUser.email}
+                onChange={e => setNewUser({...newUser, email: e.target.value})}
+                placeholder="user@example.com"
+                leftIcon={<Mail size={16} />}
+              />
+            </FormField>
+            
+            <FormField label="Full Name" required>
+              <Input
+                type="text"
+                required
+                value={newUser.name}
+                onChange={e => setNewUser({...newUser, name: e.target.value})}
+                placeholder="John Doe"
+              />
+            </FormField>
+            
+            <FormField label="Assign Roles">
+              <div className="flex flex-wrap gap-2">
+                {availableRoles.map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role, newUser.roles, (r) => setNewUser({...newUser, roles: r}))}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
+                      newUser.roles.includes(role) 
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    )}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+
+            {availableGroups.length > 0 && (
+              <FormField label="Add to Groups">
+                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2">
+                  {availableGroups.map(group => (
+                    <Checkbox
+                      key={group.id}
+                      label={group.name}
+                      checked={newUser.groupIds.includes(group.id)}
+                      onChange={() => {
+                        const ids = newUser.groupIds.includes(group.id)
+                          ? newUser.groupIds.filter(id => id !== group.id)
+                          : [...newUser.groupIds, group.id];
+                        setNewUser({...newUser, groupIds: ids});
+                      }}
+                    />
+                  ))}
+                </div>
+              </FormField>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" type="button" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              Create User
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} size="lg">
+        <ModalHeader>Edit User</ModalHeader>
+        <ModalBody className="space-y-5">
+          {editingUser && (
+            <>
+              {/* User Info (Read-only) */}
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+                <Avatar name={editingUser.name || editingUser.email} size="lg" />
+                <div>
+                  <p className="font-semibold text-slate-900">{editingUser.name || 'Unknown'}</p>
+                  <p className="text-sm text-slate-500">{editingUser.email}</p>
+                </div>
+              </div>
+              
+              <FormField label="Roles">
+                <div className="flex flex-wrap gap-2">
+                  {availableRoles.map(role => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => toggleRole(role, editForm.roles, (r) => setEditForm({...editForm, roles: r}))}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
+                        editForm.roles.includes(role) 
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      )}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </FormField>
+
+              {availableGroups.length > 0 && (
+                <FormField label="Groups">
+                  <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2">
+                    {availableGroups.map(group => (
+                      <Checkbox
+                        key={group.id}
+                        label={group.name}
+                        checked={editForm.groupIds.includes(group.id)}
+                        onChange={() => {
+                          const ids = editForm.groupIds.includes(group.id)
+                            ? editForm.groupIds.filter(id => id !== group.id)
+                            : [...editForm.groupIds, group.id];
+                          setEditForm({...editForm, groupIds: ids});
+                        }}
+                      />
+                    ))}
+                  </div>
+                </FormField>
+              )}
+            </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setShowEditModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={saveChanges}>
+            Save Changes
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };

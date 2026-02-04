@@ -1,6 +1,35 @@
 import { useState, useEffect } from 'react';
-import { Users, Activity, ShoppingBag, CheckCircle, AlertTriangle, TrendingUp, Calendar, Target, Flame } from 'lucide-react';
+import { 
+  Users, 
+  Activity, 
+  TrendingUp, 
+  TrendingDown,
+  Target, 
+  Flame, 
+  HeartPulse, 
+  ArrowUpRight,
+  MoreHorizontal,
+  Calendar,
+  Clock,
+  ArrowRight
+} from 'lucide-react';
+import { 
+  Card, 
+  CardHeader, 
+  CardBody, 
+  Button, 
+  Badge, 
+  Skeleton, 
+  Avatar,
+  DropdownMenu,
+  ProgressBar,
+  cn 
+} from '../components/ui/index';
+import { adminApi, healthApi, ApiError } from '../services/api';
 
+// ============================================
+// TYPES
+// ============================================
 interface StatsData {
   totalUsers: number;
   activeProtocols: number;
@@ -16,45 +45,121 @@ interface DailyActivity {
   users: number;
 }
 
-// Simple bar chart component
+interface ServiceStatus {
+  name: string;
+  status: 'healthy' | 'warning' | 'error';
+  latency?: string;
+}
+
+interface RecentActivity {
+  id: string;
+  user: string;
+  action: string;
+  target: string;
+  time: string;
+  avatar?: string;
+}
+
+// ============================================
+// ACTIVITY CHART COMPONENT
+// ============================================
 const ActivityChart = ({ data }: { data: DailyActivity[] }) => {
   const maxTasks = Math.max(...data.map(d => d.tasks), 1);
   
   return (
-    <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '0 8px' }}>
-      {data.map((day, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <div style={{ 
-            width: '100%', 
-            height: `${(day.tasks / maxTasks) * 160}px`,
-            minHeight: '4px',
-            background: 'linear-gradient(180deg, #3B82F6 0%, #2563EB 100%)',
-            borderRadius: '6px 6px 2px 2px',
-            transition: 'height 0.3s ease',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '-24px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '11px',
-              fontWeight: '600',
-              color: '#3B82F6',
-              whiteSpace: 'nowrap'
-            }}>
-              {day.tasks}
+    <div className="h-44 flex items-end gap-2">
+      {data.map((day, i) => {
+        const height = (day.tasks / maxTasks) * 100;
+        const isToday = i === data.length - 1;
+        
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+            <div className="relative w-full flex items-end justify-center h-36">
+              {/* Tooltip */}
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                {day.tasks} tasks
+              </div>
+              
+              {/* Bar */}
+              <div 
+                className={cn(
+                  'w-full max-w-8 rounded-t-md transition-all duration-300',
+                  isToday 
+                    ? 'bg-indigo-600 group-hover:bg-indigo-700' 
+                    : 'bg-indigo-200 group-hover:bg-indigo-300'
+                )}
+                style={{ height: `${Math.max(height, 4)}%` }}
+              />
             </div>
+            <span className={cn(
+              'text-xs font-medium',
+              isToday ? 'text-indigo-600' : 'text-slate-400'
+            )}>
+              {day.day}
+            </span>
           </div>
-          <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '500' }}>{day.day}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
+// ============================================
+// STAT CARD COMPONENT
+// ============================================
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: JSX.Element;
+  trend?: { value: string; isPositive: boolean };
+  iconBg: string;
+  iconColor: string;
+}
+
+const StatCard = ({ title, value, icon, trend, iconBg, iconColor }: StatCardProps) => (
+  <Card hoverable className="p-5">
+    <div className="flex items-start justify-between">
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-slate-500">{title}</p>
+        <p className="text-2xl font-semibold text-slate-900">{value}</p>
+        {trend && (
+          <div className={cn(
+            'inline-flex items-center gap-1 text-xs font-medium',
+            trend.isPositive ? 'text-emerald-600' : 'text-red-600'
+          )}>
+            {trend.isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+            {trend.value}
+          </div>
+        )}
+      </div>
+      <div className={cn('p-3 rounded-xl', iconBg, iconColor)}>
+        {icon}
+      </div>
+    </div>
+  </Card>
+);
+
+// ============================================
+// STAT SKELETON
+// ============================================
+const StatSkeleton = () => (
+  <Card className="p-5">
+    <div className="flex items-start justify-between">
+      <div className="space-y-3">
+        <Skeleton width={80} height={16} />
+        <Skeleton width={60} height={28} />
+        <Skeleton width={70} height={14} />
+      </div>
+      <Skeleton width={48} height={48} className="rounded-xl" />
+    </div>
+  </Card>
+);
+
+// ============================================
+// DASHBOARD VIEW COMPONENT
+// ============================================
 export const DashboardView = () => {
-  const [healthStatus, setHealthStatus] = useState<string>('Checking backend...')
+  const [healthStatus, setHealthStatus] = useState<string>('Checking...');
   const [statsData, setStatsData] = useState<StatsData>({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [activityData, setActivityData] = useState<DailyActivity[]>([]);
@@ -63,65 +168,41 @@ export const DashboardView = () => {
   let user = null;
   try {
     const userJson = localStorage.getItem('adminUser');
-    if (userJson && userJson !== 'undefined' && userJson !== 'null') {
-      user = JSON.parse(userJson);
-    }
+    if (userJson) user = JSON.parse(userJson);
   } catch (e) {
     console.error('Error parsing adminUser:', e);
   }
   const adminName = user?.name?.split(' ')[0] || 'Admin';
 
   useEffect(() => {
-    // Default to port 3001 (Backend) not 3000 (Frontend)
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const API_URL = baseUrl.replace(/\/api\/?$/, '');
-
     const token = localStorage.getItem('adminToken');
-    
-    // Skip checking if no token (likely redirecting)
     if (!token) return;
-
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
     
     // Health Check
-    fetch(`${API_URL}/health`)
-      .then(res => res.json())
-      .then(data => setHealthStatus(data.status === 'healthy' ? 'User Service OK' : 'Issues Detected'))
-      .catch(() => setHealthStatus('Not Connected'));
+    healthApi.check()
+      .then(data => setHealthStatus(data.status === 'healthy' ? 'healthy' : 'warning'))
+      .catch(() => setHealthStatus('error'));
 
     // Stats Check
-    fetch(`${API_URL}/api/admin/stats`, { headers })
-        .then(res => {
-          if (!res.ok) {
-            // Should probably check status before calling json()
-            if (res.status === 401) throw new Error('Unauthorized');
-            if (res.status === 404) throw new Error('Not Found');
-            if (res.status === 500) {
-              return res.text().then(text => { throw new Error('Server Error: ' + text) });
-            }
-          }
-          return res.json();
-        })
-        .then(data => {
-
-          setStatsData({
-            ...data,
-            activeChallenges: data.activeChallenges || 23,
-            avgStreak: data.avgStreak || 8.3,
-            weeklyActiveUsers: data.weeklyActiveUsers || Math.round(data.totalUsers * 0.65)
-          });
-          setIsLoading(false);
-        })
-        .catch(err => {
-            console.error('Failed to fetch stats', err);
-            setStatsData({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
-            setIsLoading(false);
+    adminApi.getStats()
+      .then(data => {
+        setStatsData({
+          totalUsers: data.totalUsers || 0,
+          activeProtocols: data.totalOrganizations || 0,
+          ordersToday: 0,
+          activeChallenges: data.activeChallenges || 23,
+          avgStreak: 8.3,
+          weeklyActiveUsers: data.activeUsersLast7Days || Math.round((data.totalUsers || 0) * 0.65)
         });
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Stats error:', err);
+        setStatsData({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
+        setIsLoading(false);
+      });
     
-    // Generate mock activity data for last 7 days
+    // Generate mock activity data
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const today = new Date().getDay();
     const mockActivity: DailyActivity[] = [];
@@ -134,16 +215,29 @@ export const DashboardView = () => {
       });
     }
     setActivityData(mockActivity);
-  }, [])
+  }, []);
 
-  const services = [
-    { name: 'User Service', status: healthStatus.includes('User Service OK') ? 'healthy' : 'error' },
-    { name: 'Habit Service', status: 'healthy' },
-    { name: 'Coaching Service', status: 'warning' }, 
-    { name: 'Retail Service', status: 'warning' },
+  const services: ServiceStatus[] = [
+    { name: 'API Gateway', status: healthStatus as 'healthy' | 'warning' | 'error', latency: '45ms' },
+    { name: 'Database', status: 'healthy', latency: '12ms' },
+    { name: 'Auth Service', status: 'healthy', latency: '23ms' },
+    { name: 'Cache', status: 'warning', latency: '156ms' },
   ];
 
-  // Greeting based on time of day
+  const recentActivity: RecentActivity[] = [
+    { id: '1', user: 'Sarah Chen', action: 'completed', target: 'Morning Routine Protocol', time: '2 minutes ago' },
+    { id: '2', user: 'Mike Johnson', action: 'joined', target: 'Fitness Challenge', time: '15 minutes ago' },
+    { id: '3', user: 'Emily Davis', action: 'earned', target: '7-Day Streak Badge', time: '1 hour ago' },
+    { id: '4', user: 'Alex Kim', action: 'started', target: 'Meditation Protocol', time: '2 hours ago' },
+  ];
+
+  const topChallenges = [
+    { name: '30-Day Fitness', users: 234, progress: 78, color: 'bg-blue-600' },
+    { name: 'Hydration Hero', users: 189, progress: 65, color: 'bg-emerald-600' },
+    { name: 'Meditation Master', users: 156, progress: 52, color: 'bg-purple-600' },
+    { name: 'Sleep Better', users: 98, progress: 41, color: 'bg-indigo-600' },
+  ];
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -151,90 +245,65 @@ export const DashboardView = () => {
     return 'Good evening';
   };
 
-  const stats = [
+  const stats: StatCardProps[] = [
     { 
       title: 'Total Users', 
       value: (statsData.totalUsers || 0).toLocaleString(), 
-      icon: <Users size={24} />, 
-      trend: '+12%',
-      trendUp: true,
-      color: '#3B82F6',
-      bgColor: '#EFF6FF'
+      icon: <Users size={22} />, 
+      trend: { value: '+12% vs last month', isPositive: true },
+      iconColor: 'text-blue-600',
+      iconBg: 'bg-blue-50'
     },
     { 
       title: 'Active Challenges', 
       value: (statsData.activeChallenges || 0).toString(), 
-      icon: <Target size={24} />, 
-      trend: '+5',
-      trendUp: true,
-      color: '#10B981',
-      bgColor: '#ECFDF5'
+      icon: <Target size={22} />, 
+      trend: { value: '+5 this week', isPositive: true },
+      iconColor: 'text-emerald-600',
+      iconBg: 'bg-emerald-50'
     },
     { 
       title: 'Avg. Streak', 
       value: `${statsData.avgStreak || 0} days`, 
-      icon: <Flame size={24} />, 
-      trend: '+2.1',
-      trendUp: true,
-      color: '#F97316',
-      bgColor: '#FFF7ED'
+      icon: <Flame size={22} />, 
+      trend: { value: '+2.1 days', isPositive: true },
+      iconColor: 'text-orange-600',
+      iconBg: 'bg-orange-50'
     },
     { 
       title: 'Weekly Active', 
       value: (statsData.weeklyActiveUsers || 0).toLocaleString(), 
-      icon: <Activity size={24} />, 
-      trend: '+8%',
-      trendUp: true,
-      color: '#8B5CF6',
-      bgColor: '#F5F3FF'
+      icon: <Activity size={22} />, 
+      trend: { value: '+8% engagement', isPositive: true },
+      iconColor: 'text-purple-600',
+      iconBg: 'bg-purple-50'
     },
   ];
 
-  // Skeleton loader component
-  const StatSkeleton = () => (
-    <div style={{ 
-      background: 'white', 
-      padding: '24px', 
-      borderRadius: '16px', 
-      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-      animation: 'pulse 2s infinite'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <div style={{ width: '80px', height: '14px', background: '#E2E8F0', borderRadius: '4px' }} />
-        <div style={{ width: '48px', height: '48px', background: '#F1F5F9', borderRadius: '12px' }} />
-      </div>
-      <div style={{ width: '60px', height: '32px', background: '#E2E8F0', borderRadius: '4px', marginBottom: '8px' }} />
-      <div style={{ width: '50px', height: '12px', background: '#F1F5F9', borderRadius: '4px' }} />
-    </div>
-  );
-
   return (
-    <div>
-      {/* Welcome Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: '800', 
-          color: '#0F172A', 
-          marginBottom: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          {getGreeting()}, {adminName} 👋
-        </h1>
-        <p style={{ color: '#64748B', fontSize: '16px' }}>
-          Here's what's happening with HabitPulse today
-        </p>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {getGreeting()}, {adminName} 👋
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Here's what's happening with your platform today
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" leftIcon={<Calendar size={16} />}>
+            Last 7 days
+          </Button>
+          <Button variant="primary" leftIcon={<ArrowUpRight size={16} />}>
+            View Reports
+          </Button>
+        </div>
       </div>
-       
+
       {/* Stats Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '20px', 
-        marginBottom: '32px' 
-      }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading ? (
           <>
             <StatSkeleton />
@@ -243,213 +312,155 @@ export const DashboardView = () => {
             <StatSkeleton />
           </>
         ) : (
-          stats.map((stat, i) => (
-            <div key={i} style={{ 
-              background: 'white', 
-              padding: '24px', 
-              borderRadius: '16px', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              border: '1px solid #F1F5F9',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              cursor: 'default'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
-            }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                <div style={{ color: '#64748B', fontSize: '14px', fontWeight: '500' }}>{stat.title}</div>
-                <div style={{ 
-                  padding: '12px', 
-                  background: stat.bgColor, 
-                  borderRadius: '12px',
-                  color: stat.color
-                }}>
-                  {stat.icon}
-                </div>
-              </div>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#0F172A', marginBottom: '4px' }}>
-                {stat.value}
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                fontSize: '13px', 
-                color: stat.trendUp ? '#10B981' : '#EF4444',
-                fontWeight: '500'
-              }}>
-                <TrendingUp size={14} />
-                {stat.trend} from last month
-              </div>
-            </div>
-          ))
+          stats.map((stat, i) => <StatCard key={i} {...stat} />)
         )}
       </div>
 
-      {/* Two Column Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        {/* Recent Activity Placeholder */}
-        <div style={{ 
-          background: 'white', 
-          padding: '24px', 
-          borderRadius: '16px', 
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          border: '1px solid #F1F5F9'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0F172A' }}>
-              📊 User Activity (Last 7 Days)
-            </h2>
-            <button style={{
-              background: '#F1F5F9',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '500',
-              color: '#64748B',
-              cursor: 'pointer'
-            }}>
-              View Report
-            </button>
-          </div>
-          <div style={{ 
-            height: '200px', 
-            background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', 
-            borderRadius: '12px',
-            padding: '16px'
-          }}>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Chart */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900">User Activity</h3>
+              <p className="text-sm text-slate-500">Tasks completed per day</p>
+            </div>
+            <DropdownMenu
+              trigger={
+                <button className="icon-btn icon-btn-sm">
+                  <MoreHorizontal size={18} />
+                </button>
+              }
+              items={[
+                { label: 'Export data', onClick: () => {} },
+                { label: 'View details', onClick: () => {} },
+              ]}
+            />
+          </CardHeader>
+          <CardBody>
             {activityData.length > 0 ? (
               <ActivityChart data={activityData} />
             ) : (
-              <div style={{ 
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#94A3B8',
-                fontSize: '14px'
-              }}>
-                Loading activity data...
+              <div className="h-44 flex items-center justify-center text-slate-400">
+                Loading chart...
               </div>
             )}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Top Challenges */}
-        <div style={{ 
-          background: 'white', 
-          padding: '24px', 
-          borderRadius: '16px', 
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          border: '1px solid #F1F5F9'
-        }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0F172A', marginBottom: '20px' }}>
-            🏆 Top Challenges
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[
-              { name: '30-Day Fitness', users: 234, color: '#3B82F6' },
-              { name: 'Hydration Hero', users: 189, color: '#10B981' },
-              { name: 'Meditation Master', users: 156, color: '#8B5CF6' },
-            ].map((challenge, i) => (
-              <div key={i} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '12px',
-                background: '#F8FAFC',
-                borderRadius: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '8px', 
-                    background: challenge.color,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '14px'
-                  }}>
-                    {i + 1}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900">Top Challenges</h3>
+              <p className="text-sm text-slate-500">By participation</p>
+            </div>
+            <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>
+              View all
+            </Button>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            {topChallenges.map((challenge, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      'flex items-center justify-center w-6 h-6 rounded text-xs font-bold text-white',
+                      challenge.color
+                    )}>
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-slate-700">{challenge.name}</span>
                   </div>
-                  <span style={{ fontWeight: '500', color: '#334155' }}>{challenge.name}</span>
+                  <span className="text-xs text-slate-500">{challenge.users} users</span>
                 </div>
-                <span style={{ fontSize: '13px', color: '#64748B' }}>{challenge.users} users</span>
+                <ProgressBar value={challenge.progress} size="sm" />
               </div>
             ))}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
       </div>
 
-      {/* System Health */}
-      <div style={{ 
-        background: 'white', 
-        padding: '24px', 
-        borderRadius: '16px', 
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        border: '1px solid #F1F5F9'
-      }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0F172A', marginBottom: '20px' }}>
-          ⚡ System Modules Status
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-          {services.map((s, i) => (
-            <div key={i} style={{ 
-              border: '1px solid',
-              borderColor: s.status === 'healthy' ? '#DCFCE7' : s.status === 'warning' ? '#FEF3C7' : '#FEE2E2',
-              background: s.status === 'healthy' ? '#F0FDF4' : s.status === 'warning' ? '#FFFBEB' : '#FEF2F2',
-              padding: '16px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              transition: 'transform 0.2s'
-            }}>
-              {s.status === 'healthy' 
-                ? <CheckCircle size={20} color="#15803D" /> 
-                : s.status === 'warning'
-                  ? <AlertTriangle size={20} color="#D97706" />
-                  : <AlertTriangle size={20} color="#B91C1C" />
-              }
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ 
-                  fontWeight: '600',
-                  color: s.status === 'healthy' ? '#166534' : s.status === 'warning' ? '#B45309' : '#991B1B',
-                  fontSize: '14px'
-                }}>{s.name}</span>
-                {s.status === 'warning' && (
-                  <span style={{ fontSize: '11px', color: '#B45309', marginTop: '2px' }}>
-                    PRO Feature • Coming Soon
-                  </span>
-                )}
-                {s.status === 'healthy' && (
-                  <span style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
-                    Operational
-                  </span>
-                )}
-              </div>
+      {/* Bottom Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900">Recent Activity</h3>
+              <p className="text-sm text-slate-500">Latest user actions</p>
             </div>
-          ))}
-        </div>
-      </div>
+            <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>
+              View all
+            </Button>
+          </CardHeader>
+          <CardBody className="space-y-1 -mx-5 px-5">
+            {recentActivity.map((activity) => (
+              <div 
+                key={activity.id} 
+                className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0"
+              >
+                <Avatar name={activity.user} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-medium">{activity.user}</span>
+                    {' '}{activity.action}{' '}
+                    <span className="font-medium">{activity.target}</span>
+                  </p>
+                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                    <Clock size={12} />
+                    {activity.time}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
 
-      {/* CSS for animations */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+        {/* System Health */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                <HeartPulse size={18} className="text-red-500" />
+                System Health
+              </h3>
+              <p className="text-sm text-slate-500">Service status overview</p>
+            </div>
+            <Badge variant={healthStatus === 'healthy' ? 'success' : healthStatus === 'warning' ? 'warning' : 'error'} dot>
+              {healthStatus === 'healthy' ? 'All Operational' : healthStatus === 'warning' ? 'Degraded' : 'Issues Detected'}
+            </Badge>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            {services.map((service, i) => (
+              <div 
+                key={i} 
+                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    'w-2 h-2 rounded-full',
+                    service.status === 'healthy' && 'bg-emerald-500',
+                    service.status === 'warning' && 'bg-amber-500',
+                    service.status === 'error' && 'bg-red-500'
+                  )} />
+                  <span className="text-sm font-medium text-slate-700">{service.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {service.latency && (
+                    <span className="text-xs text-slate-400">{service.latency}</span>
+                  )}
+                  <Badge 
+                    variant={service.status === 'healthy' ? 'success' : service.status === 'warning' ? 'warning' : 'error'}
+                  >
+                    {service.status === 'healthy' ? 'Operational' : service.status === 'warning' ? 'Degraded' : 'Down'}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 };
