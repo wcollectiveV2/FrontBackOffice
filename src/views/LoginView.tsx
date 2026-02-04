@@ -218,10 +218,10 @@ export const LoginView = () => {
             </p>
           </div>
 
-          {/* Demo Hint */}
+          {/* Credentials Hint */}
           <div className="mt-6 p-4 rounded-xl bg-slate-100 border border-slate-200">
             <p className="text-xs text-slate-500 text-center">
-              <strong>Demo:</strong> Use <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin@example.com</code> / <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin</code>
+              <strong>Admin:</strong> Use <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin@chrislo.com</code> / <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin</code>
             </p>
           </div>
         </div>
