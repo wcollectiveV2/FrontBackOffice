@@ -360,6 +360,25 @@ export const adminApi = {
     return apiRequest<Organization[]>('/api/admin/organizations');
   },
 
+  getUserOrganizations: async (userId: string): Promise<any[]> => {
+    const res = await apiRequest<{ memberships: any[] }>(`/api/admin/users/${userId}/organizations`);
+    return res.memberships || [];
+  },
+
+  addUserToOrganization: async (userId: string, organizationId: string, role: string): Promise<void> => {
+    return apiRequest(`/api/admin/users/${userId}/organizations`, {
+        method: 'POST',
+        body: { organizationId, role }
+    });
+  },
+
+  updateUserOrganizationRole: async (userId: string, organizationId: string, role: string): Promise<void> => {
+    return apiRequest(`/api/admin/users/${userId}/organizations/${organizationId}`, {
+        method: 'PUT',
+        body: { role }
+    });
+  },
+
   // Admin Notifications
   getNotifications: async (limit = 20): Promise<{ notifications: AdminNotification[]; unreadCount: number }> => {
     return apiRequest(`/api/admin/notifications?limit=${limit}`);

@@ -22,7 +22,7 @@ import {
   EmptyState,
   cn 
 } from '../components/ui/index';
-import { usersApi, groupsApi, organizationsApi, User, Group, Organization, ApiError } from '../services/api';
+import { usersApi, groupsApi, organizationsApi, adminApi, User, Group, Organization, ApiError } from '../services/api';
 
 // ============================================
 // USER MANAGEMENT VIEW
@@ -33,11 +33,15 @@ export const UserManagementView = () => {
   
   const [users, setUsers] = useState<User[]>([]);
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
+  const [availableOrgs, setAvailableOrgs] = useState<Organization[]>([]); 
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userMemberships, setUserMemberships] = useState<any[]>([]);
+  const [selectedOrgToAdd, setSelectedOrgToAdd] = useState('');
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+
   const [showEditModal, setShowEditModal] = useState(false);
   
   // Form states
@@ -90,18 +94,67 @@ export const UserManagementView = () => {
     }
   };
 
+  const fetchOrgs = async () => {
+    try {
+      const data = await organizationsApi.list();
+      setAvailableOrgs(data);
+    } catch (err) {
+      console.error('Failed to fetch orgs:', err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchGroups();
+    fetchOrgs();
   }, [organizationId]);
   
-  const openEditModal = (user: User) => {
+  const openEditModal = async (user: User) => {
     setEditingUser(user);
     setEditForm({
       roles: user.roles || [],
       groupIds: user.groups ? user.groups.map(g => g.id) : []
     });
+    
+    // Fetch memberships
+    try {
+        const memberships = await adminApi.getUserOrganizations(user.id);
+        setUserMemberships(memberships);
+    } catch(err) {
+        console.error("Failed to fetch user memberships", err);
+        setUserMemberships([]);
+    }
+    
+    setSelectedOrgToAdd('');
     setShowEditModal(true);
+  };
+
+
+  const handleAddUserToOrg = async () => {
+    if (!editingUser || !selectedOrgToAdd) return;
+    try {
+        await adminApi.addUserToOrganization(editingUser.id, selectedOrgToAdd, 'member');
+        // Refresh memberships
+        const memberships = await adminApi.getUserOrganizations(editingUser.id);
+        setUserMemberships(memberships);
+        setSelectedOrgToAdd('');
+    } catch (err) {
+        console.error('Failed to add user to org:', err);
+        alert('Failed to add user to organization');
+    }
+  };
+
+  const handleUpdateOrgRole = async (orgId: string, role: string) => {
+      if (!editingUser) return;
+      try {
+          await adminApi.updateUserOrganizationRole(editingUser.id, orgId, role);
+          // Refresh memberships
+          const memberships = await adminApi.getUserOrganizations(editingUser.id);
+          setUserMemberships(memberships);
+      } catch (err) {
+          console.error('Failed to update org role:', err);
+          alert('Failed to update organization role');
+      }
   };
 
   const saveChanges = async () => {
@@ -427,6 +480,79 @@ export const UserManagementView = () => {
                   </div>
                 </FormField>
               )}
+
+              <div className="pt-4 border-t border-slate-200">
+                <h3 className="text-sm font-medium text-slate-700 mb-3 block">Organizations</h3>
+                
+                {/* List current memberships */}
+                <div className="space-y-3 mb-4">
+                  {userMemberships.map(m => (
+                    <div key={m.organization_id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                         {m.logo_url ? (
+                             <img src={m.logo_url} className="w-8 h-8 rounded object-cover" alt="" />
+                         ) : (
+                             <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                                 {m.organization_name?.substring(0, 2).toUpperCase()}
+                             </div>
+                         )}
+                         <div>
+                             <p className="font-medium text-sm text-slate-900">{m.organization_name}</p>
+                             <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 capitalize">{m.organization_type}</span>
+                                <span className={cn(
+                                    "text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase",
+                                    m.role === 'admin' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+                                )}>
+                                    {m.role}
+                                </span>
+                             </div>
+                         </div>
+                      </div>
+                      <select 
+                        value={m.role}
+                        onChange={(e) => handleUpdateOrgRole(m.organization_id, e.target.value)}
+                        className="text-sm border-slate-200 rounded-md py-1 pl-2 pr-8 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  ))}
+                  {userMemberships.length === 0 && (
+                      <div className="text-sm text-slate-400 italic p-2 bg-slate-50 rounded border border-slate-100 text-center">
+                          Not a member of any organization
+                      </div>
+                  )}
+                </div>
+
+                {/* Add to new org */}
+                <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                        <select 
+                            className="w-full text-sm border-slate-200 rounded-lg h-9 pl-3 pr-8 focus:ring-indigo-500 focus:border-indigo-500"
+                            value={selectedOrgToAdd}
+                            onChange={e => setSelectedOrgToAdd(e.target.value)}
+                        >
+                            <option value="">Select organization to add...</option>
+                            {availableOrgs
+                                .filter(o => !userMemberships.find(m => m.organization_id === o.id))
+                                .map(o => (
+                                <option key={o.id} value={o.id}>{o.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <Button
+                        size="sm" 
+                        disabled={!selectedOrgToAdd} 
+                        onClick={handleAddUserToOrg}
+                        leftIcon={<Plus size={14} />}
+                    >
+                        Add
+                    </Button>
+                </div>
+              </div>
+
             </>
           )}
         </ModalBody>
