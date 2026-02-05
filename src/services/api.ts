@@ -291,6 +291,8 @@ export interface AdminStats {
   activeUsersLast7Days: number;
   organizationsByType?: Record<string, number>;
   usersByRole?: Record<string, number>;
+  activityData?: Array<{ day: string; tasks: number; users: number }>;
+  topChallenges?: Array<{ name: string; users: number; progress: number; color: string }>;
 }
 
 export interface AuditLog {
@@ -302,6 +304,17 @@ export interface AuditLog {
   previous_state: any;
   new_state: any;
   created_at: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  type: 'user_registered' | 'challenge_milestone' | 'system' | string;
+  title: string;
+  description: string;
+  time: string;
+  unread: boolean;
+  created_at: string;
+  data?: any;
 }
 
 export const adminApi = {
@@ -345,6 +358,19 @@ export const adminApi = {
   
   getOrganizationsWithHierarchy: async (): Promise<Organization[]> => {
     return apiRequest<Organization[]>('/api/admin/organizations');
+  },
+
+  // Admin Notifications
+  getNotifications: async (limit = 20): Promise<{ notifications: AdminNotification[]; unreadCount: number }> => {
+    return apiRequest(`/api/admin/notifications?limit=${limit}`);
+  },
+
+  markAllNotificationsRead: async (): Promise<{ success: boolean }> => {
+    return apiRequest('/api/admin/notifications/mark-all-read', { method: 'POST' });
+  },
+
+  markNotificationRead: async (notificationId: string): Promise<{ success: boolean }> => {
+    return apiRequest(`/api/admin/notifications/${notificationId}/read`, { method: 'PATCH' });
   },
 };
 

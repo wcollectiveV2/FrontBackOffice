@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, User, Bell, Search, Menu, Settings, Moon, Sun, ChevronDown } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { LogOut, User, Bell, Search, Menu, Settings, Moon, Sun, ChevronDown, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLayout } from '../layouts/AdminLayout';
 import { Button, Avatar, SearchInput, Badge, cn } from './ui/index';
+import { adminApi, AdminNotification } from '../services/api';
 
 // ============================================
 // HEADER COMPONENT
@@ -16,8 +17,72 @@ export const Header = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(() => {
+    // Load read notification IDs from localStorage
+    try {
+      const stored = localStorage.getItem('adminReadNotifications');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    try {
+      const data = await adminApi.getNotifications(20);
+      setNotifications(data.notifications || []);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+      // Keep existing notifications on error
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  // Fetch notifications on mount and when dropdown opens
+  useEffect(() => {
+    fetchNotifications();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotifications();
+    }
+  }, [showNotifications, fetchNotifications]);
+
+  // Save read notification IDs to localStorage
+  useEffect(() => {
+    localStorage.setItem('adminReadNotifications', JSON.stringify([...readNotificationIds]));
+  }, [readNotificationIds]);
+
+  // Mark notification as read locally
+  const markAsRead = (notificationId: string) => {
+    setReadNotificationIds(prev => new Set([...prev, notificationId]));
+    adminApi.markNotificationRead(notificationId).catch(console.error);
+  };
+
+  // Mark all as read locally
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadNotificationIds(prev => new Set([...prev, ...allIds]));
+    adminApi.markAllNotificationsRead().catch(console.error);
+  };
+
+  // Check if notification is unread (considering local read state)
+  const isUnread = (notification: AdminNotification) => {
+    return notification.unread && !readNotificationIds.has(notification.id);
+  };
+
+  const unreadCount = notifications.filter(isUnread).length;
 
   // Get user info
   let user = null;
@@ -59,15 +124,6 @@ export const Header = () => {
   };
 
   const currentPage = pageTitles[location.pathname] || { title: 'Page', description: '' };
-
-  // Mock notifications
-  const notifications = [
-    { id: 1, title: 'New user registered', description: 'John Doe joined 5 minutes ago', time: '5m', unread: true },
-    { id: 2, title: 'Protocol completed', description: '15 users completed "Morning Routine"', time: '1h', unread: true },
-    { id: 3, title: 'System update', description: 'New features available', time: '2h', unread: false },
-  ];
-
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-4 border-b border-slate-200 bg-white/95 backdrop-blur-sm px-4 lg:px-6">
@@ -131,37 +187,62 @@ export const Header = () => {
             <div className="absolute right-0 top-full mt-2 w-80 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <h3 className="font-semibold text-slate-900">Notifications</h3>
-                <button className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                  Mark all read
-                </button>
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={markAllAsRead}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    Mark all read
+                  </button>
+                )}
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    className={cn(
-                      'w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors',
-                      notification.unread && 'bg-indigo-50/50'
-                    )}
+                {notificationsLoading && notifications.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Bell className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">No notifications yet</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => {
+                    const notifUnread = isUnread(notification);
+                    return (
+                      <button
+                        key={notification.id}
+                        onClick={() => markAsRead(notification.id)}
+                        className={cn(
+                          'w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors',
+                          notifUnread && 'bg-indigo-50/50'
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          {notifUnread && (
+                            <span className="mt-2 w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+                          )}
+                          <div className={cn('flex-1 min-w-0', !notifUnread && 'ml-5')}>
+                            <p className="text-sm font-medium text-slate-900 truncate">{notification.title}</p>
+                            <p className="text-xs text-slate-500 truncate">{notification.description}</p>
+                            <p className="text-xs text-slate-400 mt-1">{notification.time} ago</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {notifications.length > 0 && (
+                <div className="px-4 py-2 border-t border-slate-100">
+                  <button 
+                    onClick={() => { setShowNotifications(false); navigate('/activity'); }}
+                    className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:bg-indigo-50 rounded-lg transition-colors"
                   >
-                    <div className="flex items-start gap-3">
-                      {notification.unread && (
-                        <span className="mt-2 w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-                      )}
-                      <div className={cn('flex-1 min-w-0', !notification.unread && 'ml-5')}>
-                        <p className="text-sm font-medium text-slate-900 truncate">{notification.title}</p>
-                        <p className="text-xs text-slate-500 truncate">{notification.description}</p>
-                        <p className="text-xs text-slate-400 mt-1">{notification.time} ago</p>
-                      </div>
-                    </div>
+                    View all activity
                   </button>
-                ))}
-              </div>
-              <div className="px-4 py-2 border-t border-slate-100">
-                <button className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:bg-indigo-50 rounded-lg transition-colors">
-                  View all notifications
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>

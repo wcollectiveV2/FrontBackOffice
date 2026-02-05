@@ -415,7 +415,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, size = 'md', chil
   return (
     <ModalContext.Provider value={{ onClose }}>
       <div className="modal-backdrop" onClick={onClose}>
-        <div className={cn('modal', sizes[size])} onClick={(e) => e.stopPropagation()}>
+        <div 
+          role="dialog" 
+          aria-modal="true" 
+          className={cn('modal', sizes[size])} 
+          onClick={(e) => e.stopPropagation()}
+        >
           {children}
         </div>
       </div>

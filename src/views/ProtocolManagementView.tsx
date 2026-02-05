@@ -364,7 +364,7 @@ export const ProtocolManagementView = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           ...newProtocol,
-          organization_id: newProtocol.organization_id ? parseInt(newProtocol.organization_id) : null
+          organization_id: newProtocol.organization_id || null
         })
       });
       const data = await res.json();
@@ -438,7 +438,8 @@ export const ProtocolManagementView = () => {
     try {
       const res = await fetch(`${API_URL}/protocols/${id}/duplicate`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        body: JSON.stringify({})
       });
       
       if (res.ok) {
@@ -463,7 +464,7 @@ export const ProtocolManagementView = () => {
       : `${API_URL}/protocols/${selectedProtocol.id}/assign`;
 
     const body = assignForm.type === 'organization'
-      ? { organization_id: parseInt(assignForm.targetId), assign_to_all_members: assignForm.assignToMembers }
+      ? { organization_id: assignForm.targetId, assign_to_all_members: assignForm.assignToMembers }
       : { targetType: 'USER', targetId: assignForm.targetId };
 
     try {

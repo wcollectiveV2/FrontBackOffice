@@ -164,6 +164,7 @@ export const DashboardView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activityData, setActivityData] = useState<DailyActivity[]>([]);
   const [recentLogs, setRecentLogs] = useState<RecentActivity[]>([]);
+  const [topChallenges, setTopChallenges] = useState<any[]>([]);
   
   // Get admin user name
   let user = null;
@@ -191,15 +192,49 @@ export const DashboardView = () => {
           totalUsers: data.totalUsers || 0,
           activeProtocols: data.totalOrganizations || 0,
           ordersToday: 0,
-          activeChallenges: data.activeChallenges || 23,
-          avgStreak: 8.3,
-          weeklyActiveUsers: data.activeUsersLast7Days || Math.round((data.totalUsers || 0) * 0.65)
+          activeChallenges: data.activeChallenges || 0,
+          avgStreak: 0,
+          weeklyActiveUsers: data.activeUsersLast7Days || 0
         });
+        
+        // Process Activity Data
+        if (data.activityData) {
+           const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+           const today = new Date();
+           const populatedActivity: DailyActivity[] = [];
+           
+           for (let i = 6; i >= 0; i--) {
+               const d = new Date(today);
+               d.setDate(today.getDate() - i);
+               const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+               
+               // Find data for this day
+               // API returns 'Dy' (e.g., 'Mon', 'Tue')
+               // Note: local date might differ slightly from server time, but for last 7 days chart it's acceptable approximation
+               // Better is to match by date string if API returned full date
+               const dayData = data.activityData.find((a: any) => a.day === dayName);
+               
+               populatedActivity.push({
+                   day: dayName,
+                   tasks: dayData ? dayData.tasks : 0,
+                   users: dayData ? dayData.users : 0
+               });
+           }
+           setActivityData(populatedActivity);
+        } else {
+             setActivityData([]);
+        }
+
+        if (data.topChallenges) {
+            setTopChallenges(data.topChallenges);
+        }
+
         setIsLoading(false);
       })
       .catch((err) => {
         console.error('Stats error:', err);
         setStatsData({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
+        setActivityData([]);
         setIsLoading(false);
       });
 
@@ -210,41 +245,20 @@ export const DashboardView = () => {
          if (logs.length > 0) {
            setRecentLogs(logs.map((log: any) => ({
              id: log.id,
-             user: log.user_name || 'System',
+             user: log.user_name || log.admin_name || 'System',
              action: log.action,
-             target: log.details || '-',
+             target: log.target_type ? `${log.target_type} ${log.target_id}` : (log.details || '-'),
              time: new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
            })));
          } else {
-             // Fallback to mock if empty
-             setRecentLogs([
-                { id: '1', user: 'System', action: 'initialized', target: 'Dashboard', time: 'Just now' }
-             ]);
+             // Use empty array if no logs
+             setRecentLogs([]);
          }
       })
       .catch(err => {
-         console.warn('Audit logs fetch failed, using fallback', err);
-         setRecentLogs([
-            { id: '1', user: 'Sarah Chen', action: 'completed', target: 'Morning Routine Protocol', time: '2 minutes ago' },
-            { id: '2', user: 'Mike Johnson', action: 'joined', target: 'Fitness Challenge', time: '15 minutes ago' },
-            { id: '3', user: 'Emily Davis', action: 'earned', target: '7-Day Streak Badge', time: '1 hour ago' },
-            { id: '4', user: 'Alex Kim', action: 'started', target: 'Meditation Protocol', time: '2 hours ago' },
-         ]);
+         console.warn('Audit logs fetch failed', err);
+         setRecentLogs([]);
       });
-    
-    // Generate mock activity data
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const today = new Date().getDay();
-    const mockActivity: DailyActivity[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const dayIndex = (today - i + 7) % 7;
-      mockActivity.push({
-        day: days[dayIndex],
-        tasks: Math.floor(Math.random() * 150) + 50,
-        users: Math.floor(Math.random() * 40) + 10
-      });
-    }
-    setActivityData(mockActivity);
   }, []);
 
   const services: ServiceStatus[] = [
@@ -252,13 +266,6 @@ export const DashboardView = () => {
     { name: 'Database', status: 'healthy', latency: '12ms' },
     { name: 'Auth Service', status: 'healthy', latency: '23ms' },
     { name: 'Cache', status: 'warning', latency: '156ms' },
-  ];
-
-  const topChallenges = [
-    { name: '30-Day Fitness', users: 234, progress: 78, color: 'bg-blue-600' },
-    { name: 'Hydration Hero', users: 189, progress: 65, color: 'bg-emerald-600' },
-    { name: 'Meditation Master', users: 156, progress: 52, color: 'bg-purple-600' },
-    { name: 'Sleep Better', users: 98, progress: 41, color: 'bg-indigo-600' },
   ];
 
   const getGreeting = () => {

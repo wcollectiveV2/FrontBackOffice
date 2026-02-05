@@ -191,7 +191,7 @@ export const UserManagementView = () => {
       render: (user) => (
         <DropdownMenu
           trigger={
-            <button className="icon-btn icon-btn-sm opacity-0 group-hover:opacity-100 transition-opacity">
+            <button className="icon-btn icon-btn-sm text-slate-400 hover:text-slate-600 transition-colors">
               <MoreHorizontal size={16} />
             </button>
           }
