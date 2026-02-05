@@ -17,20 +17,20 @@ test.describe('Admin Profile & Settings', () => {
   test.describe('Profile Management', () => {
     test('Should navigate to profile via user menu', async ({ page }) => {
       // Open user menu
-      await page.locator('button >> text=Admin').first().click(); // Assuming default name "Admin" or similar from header
-      // Or use the avatar/chevron if name varies
-      // Ideally we know the logged in user's name but let's try a safer selector for the dropdown trigger:
-      // The Header component puts the user name in a <p>, but wrapped in a button.
-      // Let's click the Avatar or the name.
+      // The user is Super Admin, so the button should contain that text
+      const userMenuTrigger = page.locator('header button:has-text("Super Admin")');
       
-      // Finding the user menu trigger. In Header.tsx: 
-      // <button onClick={() => setShowUserMenu(!showUserMenu)} ...>
-      // inside it has <Avatar> and name.
-      await page.click('header button:has(.rounded-full)'); // Clicking the button in header that has an avatar (rounded-full)
+      // Fallback if specific text selector fails (e.g. mobile view or name change)
+      if (await userMenuTrigger.isVisible()) {
+        await userMenuTrigger.click();
+      } else {
+        // Try clicking the avatar specifically (last button in header usually)
+        await page.locator('header .relative button:has(.rounded-full)').click();
+      }
 
       // Click Profile option
-      await expect(page.locator('text=Profile')).toBeVisible();
-      await page.click('text=Profile');
+      await expect(page.locator('button:has-text("Profile")')).toBeVisible();
+      await page.click('button:has-text("Profile")');
 
       // Verify URL and Title
       await expect(page).toHaveURL(/\/profile/);
@@ -127,10 +127,21 @@ test.describe('Admin Profile & Settings', () => {
       await page.goto('/settings');
       
       // Select App
-      await page.selectOption('select', { index: 1 }); // Select first option that isn't placeholder (if placeholder is disabled)
-      // Actually the placeholder in Select component is disabled, so index 0 of selectable options?
-      // Let's use value if possible. Apps: ['habbit_app', 'admin_panel', 'shop_app']
-      await page.selectOption('select', 'habbit_app');
+      // There are multiple selects on the page (Maintenance Mode is first). 
+      // We need specifically the one for Application in the GDPR section.
+      
+      // Option 1: Select by index (GDPR is the second form)
+      // await page.selectOption('select >> nth=1', 'habbit_app');
+      
+      // Option 2 (Better): Locate by label "Select Application"
+      // The FormField structure is Label -> Select. 
+      // We can find the label and get the select within the same container, but standard DOM traversal is tricky.
+      // Playwright's `locator('label:has-text("Select Application")').fill(...)` works for inputs associated by id, 
+      // but here we might not have ids.
+      
+      // Using n-th match for safety or better selector
+      const gdprSection = page.locator('section:has-text("GDPR & Data Compliance")');
+      await gdprSection.locator('select').selectOption('habbit_app');
 
       // Enter Email
       await page.fill('input[placeholder="user@example.com"]', 'delete_me@test.com');
