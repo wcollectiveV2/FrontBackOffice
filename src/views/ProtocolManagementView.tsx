@@ -45,6 +45,7 @@ interface Protocol {
   createdAt: string;
   elements?: ProtocolElement[];
   assignedOrganizations?: { id: number; name: string; assigned_at: string }[];
+  assignedUsers?: { id: string; name: string; email: string; assigned_at: string }[];
 }
 
 interface ProtocolElement {
@@ -641,30 +642,58 @@ export const ProtocolManagementView = () => {
                     </Button>
                   </div>
 
-                  {selectedProtocol.assignedOrganizations?.length ? (
-                    <Card>
-                      <CardHeader>
-                        <h3 className="font-semibold text-slate-900">Assigned Organizations</h3>
-                      </CardHeader>
-                      <CardBody className="divide-y divide-slate-100">
-                        {selectedProtocol.assignedOrganizations.map(org => (
-                          <div key={org.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                                <Building2 size={18} className="text-slate-500" />
+                  {(selectedProtocol.assignedOrganizations?.length || selectedProtocol.assignedUsers?.length) ? (
+                    <div className="space-y-6">
+                      {selectedProtocol.assignedOrganizations && selectedProtocol.assignedOrganizations.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <h3 className="font-semibold text-slate-900">Assigned Organizations</h3>
+                          </CardHeader>
+                          <CardBody className="divide-y divide-slate-100">
+                            {selectedProtocol.assignedOrganizations.map(org => (
+                              <div key={org.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                    <Building2 size={18} className="text-slate-500" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-slate-900">{org.name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      Assigned {new Date(org.assigned_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="success" size="sm">Active</Badge>
                               </div>
-                              <div>
-                                <p className="font-medium text-slate-900">{org.name}</p>
-                                <p className="text-xs text-slate-500">
-                                  Assigned {new Date(org.assigned_at).toLocaleDateString()}
-                                </p>
+                            ))}
+                          </CardBody>
+                        </Card>
+                      )}
+
+                      {selectedProtocol.assignedUsers && selectedProtocol.assignedUsers.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <h3 className="font-semibold text-slate-900">Assigned Users</h3>
+                          </CardHeader>
+                          <CardBody className="divide-y divide-slate-100">
+                            {selectedProtocol.assignedUsers.map(user => (
+                              <div key={user.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                                <div className="flex items-center gap-3">
+                                  <Avatar name={user.name || user.email} size="sm" />
+                                  <div>
+                                    <p className="font-medium text-slate-900">{user.name || user.email}</p>
+                                    <p className="text-xs text-slate-500">
+                                      Assigned {new Date(user.assigned_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="success" size="sm">Active</Badge>
                               </div>
-                            </div>
-                            <Badge variant="success" size="sm">Active</Badge>
-                          </div>
-                        ))}
-                      </CardBody>
-                    </Card>
+                            ))}
+                          </CardBody>
+                        </Card>
+                      )}
+                    </div>
                   ) : (
                     <Card className="p-12">
                       <EmptyState
