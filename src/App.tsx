@@ -5,6 +5,8 @@ import { UserManagementView } from './views/UserManagementView';
 import { ProtocolManagementView } from './views/ProtocolManagementView';
 import { OrganizationManagementView } from './views/OrganizationManagementView';
 import { LoginView } from './views/LoginView';
+import { SettingsView } from './views/SettingsView';
+import { ProfileView } from './views/ProfileView';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const userJson = localStorage.getItem('adminUser');
@@ -33,7 +35,8 @@ function App() {
           <Route path="protocols" element={<ProtectedRoute allowedRoles={['protocol_manager']}><ProtocolManagementView /></ProtectedRoute>} />
           <Route path="retreats" element={<ProtectedRoute allowedRoles={['retreat_manager']}><div style={{ padding: '20px' }}><h2>Retreats Management</h2><p>Coming Soon</p></div></ProtectedRoute>} />
           <Route path="shop" element={<ProtectedRoute allowedRoles={['shop_manager']}><div style={{ padding: '20px' }}><h2>Shop Management</h2><p>Coming Soon</p></div></ProtectedRoute>} />
-          <Route path="settings" element={<ProtectedRoute allowedRoles={[]}><div style={{ padding: '20px' }}><h2>Settings</h2><p>Platform Configuration</p></div></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute allowedRoles={['admin']}><SettingsView /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute><ProfileView /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -4,3 +4,9 @@ dist-ssr
 *.local
 .DS_Store
 .env
+
+# Testing
+playwright-report/
+test-results/
+coverage/
+junit.xml

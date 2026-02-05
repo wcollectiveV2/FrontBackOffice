@@ -55,6 +55,7 @@ export const Header = () => {
     '/retreats': { title: 'Retreats', description: 'Manage retreat events' },
     '/shop': { title: 'Shop', description: 'Manage shop products' },
     '/settings': { title: 'Settings', description: 'Platform configuration' },
+    '/profile': { title: 'Your Profile', description: 'Manage account settings' },
   };
 
   const currentPage = pageTitles[location.pathname] || { title: 'Page', description: '' };
@@ -189,11 +190,17 @@ export const Header = () => {
                 <p className="text-sm font-semibold text-slate-900">{user?.name || 'Admin'}</p>
                 <p className="text-xs text-slate-500 truncate">{user?.email}</p>
               </div>
-              <div className="py-1">
-                <button className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+              <div class
+                  onClick={() => { setShowUserMenu(false); navigate('/profile'); }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
                   <User size={16} className="text-slate-400" />
                   Profile
                 </button>
+                <button 
+                  onClick={() => { setShowUserMenu(false); navigate('/settings'); }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                
                 <button className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                   <Settings size={16} className="text-slate-400" />
                   Settings
