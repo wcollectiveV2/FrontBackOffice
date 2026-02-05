@@ -232,16 +232,20 @@ export const groupsApi = {
 export interface Organization {
   id: string;
   name: string;
-  type?: string;
+  type?: 'product' | 'company' | string;
   logo_url?: string;
   created_at: string;
   member_count?: number;
+  parent_id?: string;
+  description?: string;
 }
 
 export interface CreateOrganizationPayload {
   name: string;
-  type?: string;
+  type?: 'product' | 'company' | string;
   logo_url?: string;
+  parent_id?: string;
+  description?: string;
 }
 
 export const organizationsApi = {

@@ -432,6 +432,28 @@ export const ProtocolManagementView = () => {
     }
   };
 
+  const handleDuplicateProtocol = async (id: number) => {
+    if (!confirm('Are you sure you want to duplicate this protocol?')) return;
+
+    try {
+      const res = await fetch(`${API_URL}/protocols/${id}/duplicate`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      
+      if (res.ok) {
+        const duplicatedProtocol = await res.json();
+        setProtocols([...protocols, duplicatedProtocol]);
+        setSelectedProtocol(duplicatedProtocol);
+      } else {
+        throw new Error('Failed to duplicate protocol');
+      }
+    } catch (err) {
+      console.error('Error duplicating protocol:', err);
+      alert('Failed to duplicate protocol');
+    }
+  };
+
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProtocol || !assignForm.targetId) return;
@@ -552,7 +574,7 @@ export const ProtocolManagementView = () => {
                     }
                     items={[
                       { label: 'Edit protocol', icon: <Edit size={14} />, onClick: () => {} },
-                      { label: 'Duplicate', icon: <Plus size={14} />, onClick: () => {} },
+                      { label: 'Duplicate', icon: <Plus size={14} />, onClick: () => handleDuplicateProtocol(selectedProtocol.id) },
                       { divider: true, label: '' },
                       { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onClick: () => handleDeleteProtocol(selectedProtocol.id) },
                     ]}

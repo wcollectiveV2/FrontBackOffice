@@ -111,6 +111,18 @@ export const UserManagementView = () => {
     }
   };
 
+  const handleDeleteUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to delete user ${user.email}?`)) return;
+    
+    try {
+      await usersApi.delete(user.id);
+      fetchUsers();
+    } catch (err) {
+      console.error('Delete user error:', err);
+      alert('Failed to delete user');
+    }
+  };
+
   const toggleRole = (role: string, current: string[], setCurrent: (r: string[]) => void) => {
     if (current.includes(role)) {
       setCurrent(current.filter(r => r !== role));
@@ -187,7 +199,7 @@ export const UserManagementView = () => {
             { label: 'Edit user', icon: <UserCog size={14} />, onClick: () => openEditModal(user) },
             { label: 'Send email', icon: <Mail size={14} />, onClick: () => {} },
             { divider: true, label: '' },
-            { label: 'Delete user', icon: <Trash2 size={14} />, danger: true, onClick: () => {} },
+            { label: 'Delete user', icon: <Trash2 size={14} />, danger: true, onClick: () => handleDeleteUser(user) },
           ]}
         />
       )

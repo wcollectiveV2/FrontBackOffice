@@ -12,6 +12,7 @@ import {
   ModalFooter,
   FormField,
   Input,
+  Select,
   SearchInput,
   PageHeader,
   Skeleton,
@@ -24,13 +25,7 @@ import { organizationsApi, Organization, ApiError } from '../services/api';
 // ============================================
 // TYPES
 // ============================================
-interface Organization {
-  id: string;
-  name: string;
-  logo_url?: string;
-  created_at: string;
-  member_count?: number;
-}
+// Organization type imported from api service
 
 // ============================================
 // ORGANIZATION CARD COMPONENT
@@ -123,7 +118,7 @@ export const OrganizationManagementView = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState({ name: '', logo_url: '' });
+  const [formData, setFormData] = useState({ name: '', logo_url: '', type: 'company', parent_id: '' });
 
   const filteredOrgs = orgs.filter(org => {
     if (!searchQuery.trim()) return true;
@@ -148,20 +143,25 @@ export const OrganizationManagementView = () => {
 
   const openCreateModal = () => {
     setEditingOrg(null);
-    setFormData({ name: '', logo_url: '' });
+    setFormData({ name: '', logo_url: '', type: 'company', parent_id: '' });
     setShowModal(true);
   };
 
   const openEditModal = (org: Organization) => {
     setEditingOrg(org);
-    setFormData({ name: org.name, logo_url: org.logo_url || '' });
+    setFormData({ 
+      name: org.name, 
+      logo_url: org.logo_url || '',
+      type: org.type || 'company',
+      parent_id: org.parent_id || ''
+    });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingOrg(null);
-    setFormData({ name: '', logo_url: '' });
+    setFormData({ name: '', logo_url: '', type: 'company', parent_id: '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -276,6 +276,34 @@ export const OrganizationManagementView = () => {
                 leftIcon={<Building2 size={16} />}
               />
             </FormField>
+            
+            <FormField label="Type" required>
+              <Select
+                value={formData.type}
+                onChange={e => setFormData({...formData, type: e.target.value})}
+              >
+                <option value="company">Company (Parent)</option>
+                <option value="product">Product (Child)</option>
+              </Select>
+            </FormField>
+
+            {formData.type === 'product' && (
+              <FormField label="Parent Company" required>
+                <Select
+                  value={formData.parent_id}
+                  onChange={e => setFormData({...formData, parent_id: e.target.value})}
+                  required
+                >
+                  <option value="">Select a company...</option>
+                  {orgs
+                    .filter(o => (o.type === 'company' || !o.type) && o.id !== editingOrg?.id)
+                    .map(o => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))
+                  }
+                </Select>
+              </FormField>
+            )}
             
             <FormField 
               label="Logo URL" 

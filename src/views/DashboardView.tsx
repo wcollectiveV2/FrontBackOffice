@@ -163,6 +163,7 @@ export const DashboardView = () => {
   const [statsData, setStatsData] = useState<StatsData>({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [activityData, setActivityData] = useState<DailyActivity[]>([]);
+  const [recentLogs, setRecentLogs] = useState<RecentActivity[]>([]);
   
   // Get admin user name
   let user = null;
@@ -201,6 +202,35 @@ export const DashboardView = () => {
         setStatsData({ totalUsers: 0, activeProtocols: 0, ordersToday: 0 });
         setIsLoading(false);
       });
+
+    // Fetch Audit Logs (Recent Activity)
+    adminApi.getAuditLogs(1, 10)
+      .then(data => {
+         const logs = Array.isArray(data) ? data : (data.logs || []);
+         if (logs.length > 0) {
+           setRecentLogs(logs.map((log: any) => ({
+             id: log.id,
+             user: log.user_name || 'System',
+             action: log.action,
+             target: log.details || '-',
+             time: new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+           })));
+         } else {
+             // Fallback to mock if empty
+             setRecentLogs([
+                { id: '1', user: 'System', action: 'initialized', target: 'Dashboard', time: 'Just now' }
+             ]);
+         }
+      })
+      .catch(err => {
+         console.warn('Audit logs fetch failed, using fallback', err);
+         setRecentLogs([
+            { id: '1', user: 'Sarah Chen', action: 'completed', target: 'Morning Routine Protocol', time: '2 minutes ago' },
+            { id: '2', user: 'Mike Johnson', action: 'joined', target: 'Fitness Challenge', time: '15 minutes ago' },
+            { id: '3', user: 'Emily Davis', action: 'earned', target: '7-Day Streak Badge', time: '1 hour ago' },
+            { id: '4', user: 'Alex Kim', action: 'started', target: 'Meditation Protocol', time: '2 hours ago' },
+         ]);
+      });
     
     // Generate mock activity data
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -222,13 +252,6 @@ export const DashboardView = () => {
     { name: 'Database', status: 'healthy', latency: '12ms' },
     { name: 'Auth Service', status: 'healthy', latency: '23ms' },
     { name: 'Cache', status: 'warning', latency: '156ms' },
-  ];
-
-  const recentActivity: RecentActivity[] = [
-    { id: '1', user: 'Sarah Chen', action: 'completed', target: 'Morning Routine Protocol', time: '2 minutes ago' },
-    { id: '2', user: 'Mike Johnson', action: 'joined', target: 'Fitness Challenge', time: '15 minutes ago' },
-    { id: '3', user: 'Emily Davis', action: 'earned', target: '7-Day Streak Badge', time: '1 hour ago' },
-    { id: '4', user: 'Alex Kim', action: 'started', target: 'Meditation Protocol', time: '2 hours ago' },
   ];
 
   const topChallenges = [
@@ -381,6 +404,32 @@ export const DashboardView = () => {
         </Card>
       </div>
 
+      {/* Advanced Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <h3 className="font-semibold text-slate-900">Completion Rate</h3>
+            <p className="text-sm text-slate-500">Average protocol completion</p>
+          </CardHeader>
+          <CardBody>
+             <div className="h-40 flex items-center justify-center bg-slate-50 rounded-lg border border-slate-100 border-dashed text-slate-400">
+               Completion Rate Chart Visualization
+             </div>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader>
+             <h3 className="font-semibold text-slate-900">Points Distribution</h3>
+             <p className="text-sm text-slate-500">User points breakdown</p>
+          </CardHeader>
+          <CardBody>
+             <div className="h-40 flex items-center justify-center bg-slate-50 rounded-lg border border-slate-100 border-dashed text-slate-400">
+               Points Distribution Chart Visualization
+             </div>
+          </CardBody>
+        </Card>
+      </div>
+
       {/* Bottom Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -395,7 +444,7 @@ export const DashboardView = () => {
             </Button>
           </CardHeader>
           <CardBody className="space-y-1 -mx-5 px-5">
-            {recentActivity.map((activity) => (
+            {recentLogs.map((activity) => (
               <div 
                 key={activity.id} 
                 className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0"
