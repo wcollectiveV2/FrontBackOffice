@@ -49,7 +49,7 @@ export const Sidebar = () => {
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   
   const hasRole = (requiredRoles?: string[]) => {
-    if (user?.email === 'admin@chrislo.com' || user?.email === 'team@habitpulse.com') return true;
+    if (user?.email === 'admin@wcollective.com' || user?.email === 'team@habitpulse.com') return true;
     if (!requiredRoles) return true;
     if (userRoles.includes('admin')) return true;
     return requiredRoles.some(role => userRoles.includes(role));
@@ -115,13 +115,13 @@ export const Sidebar = () => {
         )}>
           <Link to="/" className={cn('flex items-center gap-3', isSidebarCollapsed && 'lg:justify-center')}>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
-              <span className="font-bold text-white text-lg">C</span>
+              <span className="font-bold text-white text-lg">w</span>
             </div>
             <span className={cn(
               'text-lg font-semibold text-slate-900 transition-opacity duration-200',
               isSidebarCollapsed && 'lg:hidden'
             )}>
-              ChrisLO
+              wcollective
             </span>
           </Link>
           

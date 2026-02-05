@@ -1,5 +1,5 @@
 /**
- * ChrisLO Admin - API Service
+ * wcollective Admin - API Service
  * Centralized API communication layer for the admin dashboard
  */
 

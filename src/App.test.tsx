@@ -12,7 +12,7 @@ global.fetch = vi.fn(() =>
 describe('Admin Dashboard', () => {
   it('renders the sidebar title', () => {
     render(<App />);
-    expect(screen.getByText('ChrisLO Admin')).toBeInTheDocument();
+    expect(screen.getByText('wcollective Admin')).toBeInTheDocument();
   });
 
   it('renders the dashboard overview by default', () => {

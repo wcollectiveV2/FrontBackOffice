@@ -6,8 +6,8 @@ export const SettingsView = () => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   // Platform Settings State
-  const [platformName, setPlatformName] = useState('ChrisLO Core Platform');
-  const [supportEmail, setSupportEmail] = useState('support@chrislo.com');
+  const [platformName, setPlatformName] = useState('wcollective Core Platform');
+  const [supportEmail, setSupportEmail] = useState('support@wcollective.com');
   const [maintenanceMode, setMaintenanceMode] = useState('false');
 
   // GDPR Request State

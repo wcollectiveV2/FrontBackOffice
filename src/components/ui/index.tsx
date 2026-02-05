@@ -1,5 +1,5 @@
 /**
- * ChrisLO Admin - UI Component Library
+ * wcollective Admin - UI Component Library
  * A comprehensive set of reusable, accessible components
  */
 

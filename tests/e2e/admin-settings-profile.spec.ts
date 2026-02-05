@@ -102,7 +102,7 @@ test.describe('Admin Profile & Settings', () => {
       await page.goto('/settings');
       
       // Update Platform Name
-      const newPlatformName = `ChrisLO Core ${Date.now()}`;
+      const newPlatformName = `wcollective Core ${Date.now()}`;
       // Finds input inside the label "Platform Name"
       // Based on FormField implementation it likely labels the input or is adjacent.
       // Using generic locator logic:

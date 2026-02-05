@@ -71,9 +71,9 @@ export const LoginView = () => {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-600/30">
-              <span className="font-bold text-white text-xl">C</span>
+              <span className="font-bold text-white text-xl">w</span>
             </div>
-            <span className="text-2xl font-semibold text-white">ChrisLO Admin</span>
+            <span className="text-2xl font-semibold text-white">wcollective Admin</span>
           </div>
 
           {/* Hero Text */}
@@ -107,7 +107,7 @@ export const LoginView = () => {
 
           {/* Footer */}
           <div className="flex items-center justify-between text-sm text-slate-500">
-            <p>© {new Date().getFullYear()} ChrisLO. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} wcollective. All rights reserved.</p>
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
               <span className="text-emerald-400">All systems operational</span>
@@ -122,9 +122,9 @@ export const LoginView = () => {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 justify-center mb-10">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600">
-              <span className="font-bold text-white text-lg">C</span>
+              <span className="font-bold text-white text-lg">w</span>
             </div>
-            <span className="text-xl font-semibold text-slate-900">ChrisLO Admin</span>
+            <span className="text-xl font-semibold text-slate-900">wcollective Admin</span>
           </div>
 
           {/* Header */}
@@ -221,7 +221,7 @@ export const LoginView = () => {
           {/* Credentials Hint */}
           <div className="mt-6 p-4 rounded-xl bg-slate-100 border border-slate-200">
             <p className="text-xs text-slate-500 text-center">
-              <strong>Admin:</strong> Use <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin@chrislo.com</code> / <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin</code>
+              <strong>Admin:</strong> Use <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin@wcollective.com</code> / <code className="px-1.5 py-0.5 bg-white rounded text-slate-700">admin</code>
             </p>
           </div>
         </div>
