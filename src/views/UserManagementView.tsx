@@ -395,26 +395,8 @@ export const UserManagementView = () => {
               </div>
             </FormField>
 
-            {availableGroups.length > 0 && (
-              <FormField label="Add to Groups">
-                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2">
-                  {availableGroups.map(group => (
-                    <Checkbox
-                      key={group.id}
-                      label={group.name}
-                      checked={newUser.groupIds.includes(group.id)}
-                      onChange={() => {
-                        const ids = newUser.groupIds.includes(group.id)
-                          ? newUser.groupIds.filter(id => id !== group.id)
-                          : [...newUser.groupIds, group.id];
-                        setNewUser({...newUser, groupIds: ids});
-                      }}
-                    />
-                  ))}
-                </div>
-              </FormField>
-            )}
           </ModalBody>
+
           <ModalFooter>
             <Button variant="outline" type="button" onClick={() => setShowAddModal(false)}>
               Cancel
@@ -460,26 +442,6 @@ export const UserManagementView = () => {
                   ))}
                 </div>
               </FormField>
-
-              {availableGroups.length > 0 && (
-                <FormField label="Groups">
-                  <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2">
-                    {availableGroups.map(group => (
-                      <Checkbox
-                        key={group.id}
-                        label={group.name}
-                        checked={editForm.groupIds.includes(group.id)}
-                        onChange={() => {
-                          const ids = editForm.groupIds.includes(group.id)
-                            ? editForm.groupIds.filter(id => id !== group.id)
-                            : [...editForm.groupIds, group.id];
-                          setEditForm({...editForm, groupIds: ids});
-                        }}
-                      />
-                    ))}
-                  </div>
-                </FormField>
-              )}
 
               <div className="pt-4 border-t border-slate-200">
                 <h3 className="text-sm font-medium text-slate-700 mb-3 block">Organizations</h3>
