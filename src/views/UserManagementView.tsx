@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, UserCog, Check, X, Plus, Filter, MoreHorizontal, Mail, Shield, Users as UsersIcon, Trash2, Download } from 'lucide-react';
 import { 
   Card, 
@@ -21,16 +22,20 @@ import {
   EmptyState,
   cn 
 } from '../components/ui/index';
-import { usersApi, groupsApi, User, Group, ApiError } from '../services/api';
+import { usersApi, groupsApi, organizationsApi, User, Group, Organization, ApiError } from '../services/api';
 
 // ============================================
 // USER MANAGEMENT VIEW
 // ============================================
 export const UserManagementView = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const organizationId = searchParams.get('organizationId');
+  
   const [users, setUsers] = useState<User[]>([]);
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -52,10 +57,25 @@ export const UserManagementView = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const data = await usersApi.list();
-      setUsers(data);
+      if (organizationId) {
+        // Fetch organization members and details in parallel
+        const [orgUsers, org] = await Promise.all([
+          organizationsApi.getMembers(organizationId),
+          organizationsApi.getById(organizationId)
+        ]);
+        setUsers(orgUsers);
+        setCurrentOrg(org);
+      } else {
+        const data = await usersApi.list();
+        setUsers(data);
+        setCurrentOrg(null);
+      }
     } catch (err) {
       console.error('Failed to fetch users:', err);
+      if (organizationId) {
+        // Fallback if organization fetch fails (e.g. invalid ID)
+        setSearchParams({});
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +93,7 @@ export const UserManagementView = () => {
   useEffect(() => {
     fetchUsers();
     fetchGroups();
-  }, []);
+  }, [organizationId]);
   
   const openEditModal = (user: User) => {
     setEditingUser(user);
@@ -210,13 +230,22 @@ export const UserManagementView = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="Users"
-        description="Manage user accounts, roles, and permissions"
+        title={currentOrg ? `Users · ${currentOrg.name}` : "Users"}
+        description={currentOrg ? `Manage members of ${currentOrg.name}` : "Manage user accounts, roles, and permissions"}
         actions={
           <>
             <Button variant="outline" leftIcon={<Download size={16} />}>
               Export
             </Button>
+            {currentOrg && (
+              <Button 
+                variant="outline" 
+                leftIcon={<X size={16} />} 
+                onClick={() => setSearchParams({})}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button variant="primary" leftIcon={<Plus size={16} />} onClick={() => setShowAddModal(true)}>
               Add User
             </Button>

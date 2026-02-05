@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, Pencil, Trash2, Plus, Globe, Calendar, Users, MoreHorizontal, Search, ExternalLink } from 'lucide-react';
 import { 
   Card, 
@@ -34,9 +35,10 @@ interface OrgCardProps {
   org: Organization;
   onEdit: () => void;
   onDelete: () => void;
+  onViewMembers: () => void;
 }
 
-const OrgCard = ({ org, onEdit, onDelete }: OrgCardProps) => (
+const OrgCard = ({ org, onEdit, onDelete, onViewMembers }: OrgCardProps) => (
   <Card hoverable className="group relative overflow-hidden">
     <CardBody className="p-5">
       {/* Actions dropdown */}
@@ -49,7 +51,7 @@ const OrgCard = ({ org, onEdit, onDelete }: OrgCardProps) => (
           }
           items={[
             { label: 'Edit organization', icon: <Pencil size={14} />, onClick: onEdit },
-            { label: 'View members', icon: <Users size={14} />, onClick: () => {} },
+            { label: 'View members', icon: <Users size={14} />, onClick: onViewMembers },
             { divider: true, label: '' },
             { label: 'Delete organization', icon: <Trash2 size={14} />, danger: true, onClick: onDelete },
           ]}
@@ -113,6 +115,7 @@ const OrgCardSkeleton = () => (
 // ORGANIZATION MANAGEMENT VIEW
 // ============================================
 export const OrganizationManagementView = () => {
+  const navigate = useNavigate();
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -255,6 +258,7 @@ export const OrganizationManagementView = () => {
               org={org} 
               onEdit={() => openEditModal(org)}
               onDelete={() => handleDelete(org.id)}
+              onViewMembers={() => navigate(`/users?organizationId=${org.id}`)}
             />
           ))}
         </div>
